@@ -4,7 +4,10 @@
 
 1. Ouvrir HACS.
 2. Aller dans `Integrations`.
-3. Ajouter ce depot comme depot personnalise.
+3. Ajouter ce depot comme depot personnalise :
+
+   `https://github.com/vico34/pyroveille`
+
 4. Choisir la categorie `Integration`.
 5. Installer `PyroVeille`.
 6. Redemarrer Home Assistant.
