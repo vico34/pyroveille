@@ -1,5 +1,5 @@
 {
-  "domain": "feuxdeforet_alert",
+  "domain": "pyroveille",
   "name": "PyroVeille",
   "codeowners": [],
   "config_flow": true,
@@ -7,5 +7,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/vico34/pyroveille/issues",
   "requirements": [],
-  "version": "0.1.2"
+  "version": "0.2.0"
 }

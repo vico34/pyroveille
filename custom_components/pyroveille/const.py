@@ -1,10 +1,10 @@
-"""Constants for Feux de Foret Alert."""
+"""Constants for PyroVeille."""
 
 from __future__ import annotations
 
 from datetime import timedelta
 
-DOMAIN = "feuxdeforet_alert"
+DOMAIN = "pyroveille"
 
 DEFAULT_NAME = "PyroVeille"
 DEFAULT_API_BASE_URL = "https://feuxdeforet.fr/api"

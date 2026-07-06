@@ -1,4 +1,4 @@
-"""Config flow for Feux de Foret Alert."""
+"""Config flow for PyroVeille."""
 
 from __future__ import annotations
 

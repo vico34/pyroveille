@@ -1,4 +1,4 @@
-"""Utility helpers for Feux de Foret Alert."""
+"""Utility helpers for PyroVeille."""
 
 from __future__ import annotations
 

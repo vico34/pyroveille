@@ -1,4 +1,4 @@
-"""Diagnostics support for Feux de Foret Alert."""
+"""Diagnostics support for PyroVeille."""
 
 from __future__ import annotations
 

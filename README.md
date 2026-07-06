@@ -9,7 +9,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 - Filtre optionnel par departements.
 - Filtre optionnel sur les feux en cours uniquement.
 - Notification persistante Home Assistant lorsqu'un nouvel incendie entre dans le perimetre.
-- Evenement Home Assistant `feuxdeforet_alert_nearby_fire` pour declencher vos propres automatisations.
+- Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
 - Geocodage optionnel des communes lorsque la route publique ne fournit pas de coordonnees.
 
@@ -17,7 +17,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 
 1. Dans HACS, ajoutez ce depot comme depot personnalise.
 2. Categorie: `Integration`.
-3. Installez `Feux de Foret Alert`.
+3. Installez `PyroVeille`.
 4. Redemarrez Home Assistant.
 5. Ajoutez l'integration depuis `Parametres > Appareils et services`.
 
@@ -48,7 +48,7 @@ alias: Alerte incendie proche
 mode: queued
 trigger:
   - platform: event
-    event_type: feuxdeforet_alert_nearby_fire
+    event_type: pyroveille_nearby_fire
 action:
   - service: notify.mobile_app_votre_telephone
     data:

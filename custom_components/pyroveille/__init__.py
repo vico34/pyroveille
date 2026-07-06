@@ -1,4 +1,4 @@
-"""Feux de Foret Alert integration."""
+"""PyroVeille integration."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from .coordinator import FeuxDeForetDataCoordinator
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Feux de Foret Alert from a config entry."""
+    """Set up PyroVeille from a config entry."""
     coordinator = FeuxDeForetDataCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
 

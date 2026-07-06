@@ -1,4 +1,4 @@
-"""Sensors for Feux de Foret Alert."""
+"""Sensors for PyroVeille."""
 
 from __future__ import annotations
 

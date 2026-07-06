@@ -1,4 +1,4 @@
-"""Data models for Feux de Foret Alert."""
+"""Data models for PyroVeille."""
 
 from __future__ import annotations
 

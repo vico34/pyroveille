@@ -1,6 +1,6 @@
 # Automatisations
 
-PyroVeille emet l'evenement `feuxdeforet_alert_nearby_fire` lorsqu'un nouvel incendie entre dans le perimetre configure.
+PyroVeille emet l'evenement `pyroveille_nearby_fire` lorsqu'un nouvel incendie entre dans le perimetre configure.
 
 ## Notification mobile
 
@@ -9,7 +9,7 @@ alias: Alerte incendie proche
 mode: queued
 trigger:
   - platform: event
-    event_type: feuxdeforet_alert_nearby_fire
+    event_type: pyroveille_nearby_fire
 action:
   - service: notify.mobile_app_votre_telephone
     data:

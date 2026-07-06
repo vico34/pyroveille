@@ -1,4 +1,4 @@
-"""Data coordinator for Feux de Foret Alert."""
+"""Data coordinator for PyroVeille."""
 
 from __future__ import annotations
 

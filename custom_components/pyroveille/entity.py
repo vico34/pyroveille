@@ -1,4 +1,4 @@
-"""Base entities for Feux de Foret Alert."""
+"""Base entities for PyroVeille."""
 
 from __future__ import annotations
 

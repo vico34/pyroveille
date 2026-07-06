@@ -1,4 +1,4 @@
-"""Binary sensors for Feux de Foret Alert."""
+"""Binary sensors for PyroVeille."""
 
 from __future__ import annotations
 

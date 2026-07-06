@@ -12,4 +12,4 @@
 
 ## Installation manuelle
 
-Copier `custom_components/feuxdeforet_alert` dans le dossier `custom_components` de Home Assistant, puis redemarrer Home Assistant.
+Copier `custom_components/pyroveille` dans le dossier `custom_components` de Home Assistant, puis redemarrer Home Assistant.
