@@ -12,6 +12,7 @@ from homeassistant.helpers import selector
 from .api import async_geocode_address
 from .const import (
     CONF_ADDRESS,
+    CONF_ADDRESS_GEOCODING_MODE,
     CONF_API_BASE_URL,
     CONF_CENTER_LATITUDE,
     CONF_CENTER_LONGITUDE,
@@ -19,6 +20,8 @@ from .const import (
     CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
     CONF_GEOCODE_MISSING_COORDINATES,
+    CONF_INCLUDE_LINK_IN_NOTIFICATIONS,
+    CONF_NOTIFICATION_MAX_DISTANCE_KM,
     CONF_ONLY_ACTIVE,
     CONF_RADIUS_KM,
     CONF_TELEGRAM_NOTIFY_SERVICE,
@@ -27,11 +30,15 @@ from .const import (
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
+    DEFAULT_INCLUDE_LINK_IN_NOTIFICATIONS,
     DEFAULT_NAME,
+    DEFAULT_NOTIFICATION_MAX_DISTANCE_KM,
     DEFAULT_ONLY_ACTIVE,
     DEFAULT_RADIUS_KM,
     DEFAULT_TELEGRAM_NOTIFY_SERVICE,
     DOMAIN,
+    GEOCODING_MODE_FALLBACK,
+    GEOCODING_MODE_OFFICIAL,
 )
 from .util import parse_departments
 
@@ -61,9 +68,15 @@ class FeuxDeForetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 radius_km = 0
             if radius_km <= 0:
                 errors[CONF_RADIUS_KM] = "invalid_radius"
+            if _notification_distance(user_input) < 0:
+                errors[CONF_NOTIFICATION_MAX_DISTANCE_KM] = "invalid_notification_distance"
 
             if not errors:
-                coords = await async_geocode_address(self.hass, address)
+                coords = await async_geocode_address(
+                    self.hass,
+                    address,
+                    allow_fallback=user_input.get(CONF_ADDRESS_GEOCODING_MODE) != GEOCODING_MODE_OFFICIAL,
+                )
                 if coords is None:
                     errors[CONF_ADDRESS] = "address_not_found"
 
@@ -116,8 +129,14 @@ class FeuxDeForetOptionsFlow(config_entries.OptionsFlow):
                 radius_km = 0
             if radius_km <= 0:
                 errors[CONF_RADIUS_KM] = "invalid_radius"
+            if _notification_distance(user_input) < 0:
+                errors[CONF_NOTIFICATION_MAX_DISTANCE_KM] = "invalid_notification_distance"
             if not errors:
-                coords = await async_geocode_address(self.hass, address)
+                coords = await async_geocode_address(
+                    self.hass,
+                    address,
+                    allow_fallback=user_input.get(CONF_ADDRESS_GEOCODING_MODE) != GEOCODING_MODE_OFFICIAL,
+                )
                 if coords is None:
                     errors[CONF_ADDRESS] = "address_not_found"
 
@@ -146,6 +165,20 @@ def _schema(defaults: dict[str, Any], *, include_center: bool = True) -> vol.Sch
                 default=defaults.get(CONF_ADDRESS, DEFAULT_ADDRESS),
             )
         ] = selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT))
+        fields[
+            vol.Required(
+                CONF_ADDRESS_GEOCODING_MODE,
+                default=defaults.get(CONF_ADDRESS_GEOCODING_MODE, GEOCODING_MODE_FALLBACK),
+            )
+        ] = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[
+                    selector.SelectOptionDict(value=GEOCODING_MODE_FALLBACK, label="Adresse puis commune"),
+                    selector.SelectOptionDict(value=GEOCODING_MODE_OFFICIAL, label="Adresse stricte"),
+                ],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        )
 
     fields[
         vol.Required(CONF_RADIUS_KM, default=defaults.get(CONF_RADIUS_KM, DEFAULT_RADIUS_KM))
@@ -167,6 +200,26 @@ def _schema(defaults: dict[str, Any], *, include_center: bool = True) -> vol.Sch
                 CONF_CREATE_PERSISTENT_NOTIFICATIONS,
                 DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
             ),
+        )
+    ] = bool
+    fields[
+        vol.Required(
+            CONF_NOTIFICATION_MAX_DISTANCE_KM,
+            default=defaults.get(CONF_NOTIFICATION_MAX_DISTANCE_KM, DEFAULT_NOTIFICATION_MAX_DISTANCE_KM),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0,
+            max=500,
+            step=1,
+            unit_of_measurement="km",
+            mode=selector.NumberSelectorMode.BOX,
+        )
+    )
+    fields[
+        vol.Required(
+            CONF_INCLUDE_LINK_IN_NOTIFICATIONS,
+            default=defaults.get(CONF_INCLUDE_LINK_IN_NOTIFICATIONS, DEFAULT_INCLUDE_LINK_IN_NOTIFICATIONS),
         )
     ] = bool
     fields[
@@ -197,3 +250,11 @@ def _normalize_telegram_service(user_input: dict[str, Any]) -> None:
     if service.startswith("notify."):
         service = service.removeprefix("notify.")
     user_input[CONF_TELEGRAM_NOTIFY_SERVICE] = service
+
+
+def _notification_distance(user_input: dict[str, Any]) -> float:
+    """Return configured notification distance threshold."""
+    try:
+        return float(user_input.get(CONF_NOTIFICATION_MAX_DISTANCE_KM, DEFAULT_NOTIFICATION_MAX_DISTANCE_KM))
+    except (TypeError, ValueError):
+        return -1

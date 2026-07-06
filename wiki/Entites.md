@@ -7,6 +7,7 @@ PyroVeille cree les entites suivantes.
 - `binary_sensor.alerte_incendie_proche`: actif si au moins un incendie est dans la zone.
 - `sensor.incendies_proches`: nombre d'incendies dans le perimetre.
 - `sensor.distance_incendie_le_plus_proche`: distance du signalement le plus proche.
+- `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie, avec `last_error` et la liste des entites carte en attributs.
 
 ## Carte
 
@@ -28,6 +29,29 @@ entities:
 ```
 
 Les noms exacts sont visibles dans `Parametres > Appareils et services > Entites`, en filtrant sur `PyroVeille`. Remplacez l'exemple par une ou plusieurs entites `device_tracker` generees par l'integration.
+
+## Carte automatique avec toutes les entites PyroVeille
+
+La carte native `map` ne sait pas selectionner des entites avec un joker comme `device_tracker.pyroveille*`. Pour alimenter automatiquement la carte avec toutes les entites PyroVeille, installez la carte custom `auto-entities` via HACS, puis utilisez :
+
+```yaml
+type: custom:auto-entities
+card:
+  type: map
+  title: Incendies PyroVeille
+  default_zoom: 9
+  hours_to_show: 24
+filter:
+  include:
+    - entity_id: device_tracker.pyroveille_*
+  exclude:
+    - attributes:
+        fire_status: inactive
+show_empty: false
+```
+
+Les nouvelles entites PyroVeille sont creees avec un identifiant suggere commencant par `device_tracker.pyroveille_`, ce qui permet a ce filtre de les afficher automatiquement.
+Supprimez le bloc `exclude` si vous voulez afficher aussi les feux inactifs.
 
 ## Couleur des marqueurs
 

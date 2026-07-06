@@ -22,4 +22,13 @@ async def async_get_config_entry_diagnostics(
         },
         "nearby_alert_count": len(coordinator.nearby_alerts),
         "nearby_alerts": [alert.as_dict() for alert in coordinator.nearby_alerts],
+        "last_successful_update": coordinator.last_successful_update.isoformat()
+        if coordinator.last_successful_update
+        else None,
+        "last_error": coordinator.last_error,
+        "center": {
+            "latitude": coordinator.center_latitude,
+            "longitude": coordinator.center_longitude,
+            "radius_km": coordinator.radius_km,
+        },
     }

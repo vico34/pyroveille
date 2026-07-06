@@ -16,7 +16,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 
 ## Installation HACS
 
-1. Dans HACS, ajoutez ce depot comme depot personnalise.
+1. Dans HACS, ajoutez ce depot comme depot personnalise : `https://github.com/vico34/pyroveille`.
 2. Categorie: `Integration`.
 3. Installez `PyroVeille`.
 4. Redemarrez Home Assistant.
@@ -31,8 +31,11 @@ Champs principaux :
 - `Departements a inclure`: optionnel, separes par virgules, exemple `13, 83, 34`.
 - `Limiter aux feux en cours`: ignore les signalements qui ne sont plus actifs.
 - `Creer une notification persistante`: cree une notification Home Assistant sur nouvel incendie proche.
+- `Notifier seulement sous cette distance`: seuil optionnel en kilometres. `0` desactive le seuil.
+- `Inclure le lien feuxdeforet.fr`: ajoute ou retire le lien source dans les notifications.
 - `Notifier via Telegram`: envoie aussi l'alerte via Telegram si le service `notify` configure est disponible.
 - `Service Telegram notify`: nom du service Telegram, par defaut `telegram` pour appeler `notify.telegram`.
+- `Mode de geocodage`: `Adresse puis commune` utilise l'API Adresse officielle puis Nominatim en secours. `Adresse stricte` limite le geocodage a l'API Adresse officielle.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
 
 ## Entites creees
@@ -40,6 +43,7 @@ Champs principaux :
 - `binary_sensor.alerte_incendie_proche`: actif si au moins un incendie est dans le perimetre.
 - `sensor.incendies_proches`: nombre d'incendies dans le perimetre.
 - `sensor.distance_incendie_le_plus_proche`: distance en km du signalement le plus proche.
+- `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie.
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
 
 ## Exemple de carte
@@ -56,6 +60,24 @@ entities:
 ```
 
 Les noms exacts des entites sont visibles dans `Parametres > Appareils et services > Entites`, en filtrant sur `PyroVeille`. Les marqueurs PyroVeille sont rouges pour les feux actifs et gris pour les feux inactifs.
+
+Pour afficher automatiquement toutes les entites `device_tracker.pyroveille_*`, installez la carte custom `auto-entities` via HACS :
+
+```yaml
+type: custom:auto-entities
+card:
+  type: map
+  title: Incendies PyroVeille
+  default_zoom: 9
+  hours_to_show: 24
+filter:
+  include:
+    - entity_id: device_tracker.pyroveille_*
+  exclude:
+    - attributes:
+        fire_status: inactive
+show_empty: false
+```
 
 ## Automatisation mobile
 

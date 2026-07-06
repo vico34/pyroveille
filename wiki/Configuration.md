@@ -5,6 +5,7 @@ PyroVeille se configure depuis l'interface Home Assistant.
 ## Zone surveillee
 
 - `Adresse du centre`: adresse utilisee comme centre de surveillance.
+- `Mode de geocodage de l'adresse`: `Adresse puis commune` autorise un secours approximatif par commune ; `Adresse stricte` utilise uniquement l'API Adresse officielle.
 - `Rayon`: rayon en kilometres.
 
 L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les coordonnees calculees en interne pour filtrer les signalements dans le rayon choisi.
@@ -17,6 +18,8 @@ L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les co
 ## Notifications et geocodage
 
 - `Creer une notification persistante`: affiche une notification Home Assistant pour chaque nouvel incendie proche.
+- `Notifier seulement sous cette distance`: seuil optionnel en kilometres. `0` signifie que toutes les alertes dans le rayon configuré peuvent notifier.
+- `Inclure le lien feuxdeforet.fr dans les notifications`: ajoute le lien source dans les messages.
 - `Notifier via Telegram`: envoie aussi l'alerte via Telegram si le service `notify` configure est disponible.
 - `Service Telegram notify`: nom du service Telegram, par defaut `telegram` pour appeler `notify.telegram`. Si votre service s'appelle `notify.telegram_maison`, saisissez `telegram_maison`.
 - `Geocoder les communes sans coordonnees natives`: place approximativement les signalements sur la carte quand la source ne fournit pas de latitude/longitude.

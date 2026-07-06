@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 from typing import Any
 from urllib.parse import urljoin
@@ -16,7 +17,7 @@ from .models import FireAlert
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-FeuxDeForetAlert/0.1"
+USER_AGENT = "HomeAssistant-PyroVeille/0.2.4"
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
@@ -150,19 +151,29 @@ class FeuxDeForetClient:
             return None
 
 
-async def async_geocode_address(hass: HomeAssistant, address: str) -> tuple[float, float] | None:
+async def async_geocode_address(
+    hass: HomeAssistant,
+    address: str,
+    *,
+    allow_fallback: bool = True,
+) -> tuple[float, float] | None:
     """Resolve a user-entered address to coordinates."""
     session = async_get_clientsession(hass)
-    return await _async_geocode_with_session(session, address)
+    return await _async_geocode_with_session(session, address, allow_fallback=allow_fallback)
 
 
 async def _async_geocode_with_session(
     session: ClientSession,
     query: str,
+    *,
+    allow_fallback: bool = True,
 ) -> tuple[float, float] | None:
     """Resolve a French address or commune to approximate coordinates."""
     if coords := await _async_geocode_adresse_gouv(session, query):
         return coords
+
+    if not allow_fallback:
+        return None
 
     for candidate in _geocode_queries(query):
         if coords := await _async_geocode_nominatim(session, candidate):
@@ -252,4 +263,16 @@ def _geocode_queries(query: str) -> list[str]:
     queries = [clean_query]
     if "france" not in clean_query.lower():
         queries.append(f"{clean_query}, France")
+    parts = [part.strip() for part in clean_query.split(",") if part.strip()]
+    if len(parts) > 1:
+        location_parts = parts[:-1] if parts[-1].lower() == "france" else parts
+        if location_parts:
+            queries.append(location_parts[-1])
+        if len(location_parts) > 1:
+            queries.append(", ".join(location_parts[-2:]))
+    if match := re.search(r"\b(\d{5})\s+([^,]+)", clean_query):
+        postcode = match.group(1)
+        city = match.group(2).strip()
+        queries.append(f"{postcode} {city}")
+        queries.append(city)
     return list(dict.fromkeys(queries))

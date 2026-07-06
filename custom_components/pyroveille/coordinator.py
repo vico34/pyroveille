@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import FeuxDeForetApiError, FeuxDeForetClient
@@ -18,6 +20,8 @@ from .const import (
     CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
     CONF_GEOCODE_MISSING_COORDINATES,
+    CONF_INCLUDE_LINK_IN_NOTIFICATIONS,
+    CONF_NOTIFICATION_MAX_DISTANCE_KM,
     CONF_ONLY_ACTIVE,
     CONF_RADIUS_KM,
     CONF_TELEGRAM_NOTIFY_SERVICE,
@@ -25,7 +29,9 @@ from .const import (
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
+    DEFAULT_INCLUDE_LINK_IN_NOTIFICATIONS,
     DEFAULT_MAX_ITEMS,
+    DEFAULT_NOTIFICATION_MAX_DISTANCE_KM,
     DEFAULT_ONLY_ACTIVE,
     DEFAULT_RADIUS_KM,
     DEFAULT_SCAN_INTERVAL,
@@ -60,6 +66,18 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 data.get(CONF_CREATE_PERSISTENT_NOTIFICATIONS, DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS),
             )
         )
+        self.notification_max_distance_km = float(
+            options.get(
+                CONF_NOTIFICATION_MAX_DISTANCE_KM,
+                data.get(CONF_NOTIFICATION_MAX_DISTANCE_KM, DEFAULT_NOTIFICATION_MAX_DISTANCE_KM),
+            )
+        )
+        self.include_link_in_notifications = bool(
+            options.get(
+                CONF_INCLUDE_LINK_IN_NOTIFICATIONS,
+                data.get(CONF_INCLUDE_LINK_IN_NOTIFICATIONS, DEFAULT_INCLUDE_LINK_IN_NOTIFICATIONS),
+            )
+        )
         self.create_telegram_notifications = bool(
             options.get(
                 CONF_CREATE_TELEGRAM_NOTIFICATIONS,
@@ -73,6 +91,8 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             )
         ).removeprefix("notify.")
         self._seen_nearby_ids: set[str] = set()
+        self.last_successful_update: datetime | None = None
+        self.last_error: str | None = None
         self.client = FeuxDeForetClient(
             hass,
             options.get(CONF_API_BASE_URL, data.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL)),
@@ -101,12 +121,15 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         try:
             alerts = await self.client.async_get_recent_fires(DEFAULT_MAX_ITEMS)
         except FeuxDeForetApiError as err:
+            self.last_error = str(err)
             raise UpdateFailed(str(err)) from err
 
         nearby = [self._with_distance(alert) for alert in alerts]
         nearby = [alert for alert in nearby if self._is_in_scope(alert)]
         nearby.sort(key=lambda alert: alert.distance_km if alert.distance_km is not None else 999999)
 
+        self.last_successful_update = dt_util.utcnow()
+        self.last_error = None
         await self._async_emit_new_alerts(nearby)
         return nearby
 
@@ -145,6 +168,8 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             self._seen_nearby_ids.add(alert.id)
             payload = alert.as_dict()
             self.hass.bus.async_fire(EVENT_NEARBY_FIRE, payload)
+            if not self._should_notify(alert):
+                continue
             if self.create_notifications:
                 persistent_notification.async_create(
                     self.hass,
@@ -179,5 +204,13 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
     def _notification_message(self, alert: FireAlert) -> str:
         """Build persistent notification content."""
         distance = f"{alert.distance_km:.1f} km" if alert.distance_km is not None else "distance inconnue"
-        link = f"\n\n{alert.url}" if alert.url else ""
+        link = f"\n\n{alert.url}" if self.include_link_in_notifications and alert.url else ""
         return f"{alert.title}\nLocalisation: {alert.location_name}\nDistance: {distance}{link}"
+
+    def _should_notify(self, alert: FireAlert) -> bool:
+        """Return whether an alert should trigger notifications."""
+        if self.notification_max_distance_km <= 0:
+            return True
+        if alert.distance_km is None:
+            return False
+        return alert.distance_km <= self.notification_max_distance_km

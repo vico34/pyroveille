@@ -9,6 +9,7 @@ from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import FeuxDeForetDataCoordinator
@@ -66,6 +67,7 @@ class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):
         super().__init__(coordinator)
         self._alert_id = alert_id
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_fire_{alert_id}"
+        self._attr_suggested_object_id = f"pyroveille_fire_{slugify(alert_id)}"
 
     @property
     def _alert(self):

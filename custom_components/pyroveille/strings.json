@@ -6,10 +6,13 @@
         "description": "Choisissez l'adresse au centre de la zone a surveiller. Les departements sont optionnels, separes par des virgules, par exemple: 13, 83, 34.",
         "data": {
           "address": "Adresse du centre",
+          "address_geocoding_mode": "Mode de geocodage de l'adresse",
           "radius_km": "Rayon",
           "departments": "Departements a inclure",
           "only_active": "Limiter aux feux en cours",
           "create_persistent_notifications": "Creer une notification persistante Home Assistant",
+          "notification_max_distance_km": "Notifier seulement sous cette distance",
+          "include_link_in_notifications": "Inclure le lien feuxdeforet.fr dans les notifications",
           "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
           "telegram_notify_service": "Service Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
@@ -21,6 +24,7 @@
       "invalid_address": "Adresse invalide.",
       "address_not_found": "Adresse introuvable. Essayez avec une adresse francaise plus precise, par exemple: 10 rue de la Paix, 75002 Paris.",
       "invalid_notify_service": "Service notify invalide.",
+      "invalid_notification_distance": "La distance de notification doit etre superieure ou egale a 0.",
       "invalid_radius": "Le rayon doit etre superieur a 0."
     },
     "abort": {
@@ -33,10 +37,13 @@
         "title": "Options PyroVeille",
         "data": {
           "address": "Adresse du centre",
+          "address_geocoding_mode": "Mode de geocodage de l'adresse",
           "radius_km": "Rayon",
           "departments": "Departements a inclure",
           "only_active": "Limiter aux feux en cours",
           "create_persistent_notifications": "Creer une notification persistante Home Assistant",
+          "notification_max_distance_km": "Notifier seulement sous cette distance",
+          "include_link_in_notifications": "Inclure le lien feuxdeforet.fr dans les notifications",
           "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
           "telegram_notify_service": "Service Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",

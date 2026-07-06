@@ -9,6 +9,9 @@ PyroVeille est une integration Home Assistant custom compatible HACS qui surveil
 - [Entites](Entites)
 - [Automatisations](Automatisations)
 - [Source des donnees](Source-des-donnees)
+- [Ameliorations proposees](Ameliorations)
+- [FAQ](FAQ)
+- [Changelog](Changelog)
 
 ## Resume
 
