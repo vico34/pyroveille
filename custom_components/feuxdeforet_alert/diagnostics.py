@@ -1,0 +1,25 @@
+"""Diagnostics support for Feux de Foret Alert."""
+
+from __future__ import annotations
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+
+from .const import DOMAIN
+from .coordinator import FeuxDeForetDataCoordinator
+
+
+async def async_get_config_entry_diagnostics(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+) -> dict[str, object]:
+    """Return diagnostics for a config entry."""
+    coordinator: FeuxDeForetDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+    return {
+        "entry": {
+            "data": dict(entry.data),
+            "options": dict(entry.options),
+        },
+        "nearby_alert_count": len(coordinator.nearby_alerts),
+        "nearby_alerts": [alert.as_dict() for alert in coordinator.nearby_alerts],
+    }

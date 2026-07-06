@@ -1,0 +1,43 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "PyroVeille",
+        "description": "Choisissez la zone a surveiller. Les departements sont optionnels, separes par des virgules, par exemple: 13, 83, 34.",
+        "data": {
+          "center_latitude": "Latitude du centre",
+          "center_longitude": "Longitude du centre",
+          "radius_km": "Rayon",
+          "departments": "Departements a inclure",
+          "only_active": "Limiter aux feux en cours",
+          "create_persistent_notifications": "Creer une notification persistante Home Assistant",
+          "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
+          "api_base_url": "URL API feuxdeforet.fr"
+        }
+      }
+    },
+    "error": {
+      "invalid_latitude": "Latitude invalide.",
+      "invalid_longitude": "Longitude invalide.",
+      "invalid_radius": "Le rayon doit etre superieur a 0."
+    },
+    "abort": {
+      "already_configured": "Cette integration est deja configuree."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options PyroVeille",
+        "data": {
+          "radius_km": "Rayon",
+          "departments": "Departements a inclure",
+          "only_active": "Limiter aux feux en cours",
+          "create_persistent_notifications": "Creer une notification persistante Home Assistant",
+          "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
+          "api_base_url": "URL API feuxdeforet.fr"
+        }
+      }
+    }
+  }
+}
