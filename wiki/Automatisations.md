@@ -19,3 +19,15 @@ action:
       data:
         url: "{{ trigger.event.data.url }}"
 ```
+
+## Telegram
+
+PyroVeille peut envoyer directement une notification Telegram si l'integration Telegram de Home Assistant expose un service `notify`.
+
+Dans les options PyroVeille :
+
+- activez `Notifier via Telegram` ;
+- laissez `Service Telegram notify` a `telegram` si votre service est `notify.telegram` ;
+- saisissez seulement le suffixe du service pour un autre nom, par exemple `telegram_maison` pour `notify.telegram_maison`.
+
+Si le service n'est pas disponible, PyroVeille conserve les notifications persistantes et ignore l'envoi Telegram sans bloquer la mise a jour.

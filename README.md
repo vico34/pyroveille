@@ -9,6 +9,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 - Filtre optionnel par departements.
 - Filtre optionnel sur les feux en cours uniquement.
 - Notification persistante Home Assistant lorsqu'un nouvel incendie entre dans le perimetre.
+- Notification Telegram optionnelle via un service `notify.telegram` existant dans Home Assistant.
 - Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
 - Geocodage optionnel des communes lorsque la route publique ne fournit pas de coordonnees.
@@ -30,6 +31,8 @@ Champs principaux :
 - `Departements a inclure`: optionnel, separes par virgules, exemple `13, 83, 34`.
 - `Limiter aux feux en cours`: ignore les signalements qui ne sont plus actifs.
 - `Creer une notification persistante`: cree une notification Home Assistant sur nouvel incendie proche.
+- `Notifier via Telegram`: envoie aussi l'alerte via Telegram si le service `notify` configure est disponible.
+- `Service Telegram notify`: nom du service Telegram, par defaut `telegram` pour appeler `notify.telegram`.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
 
 ## Entites creees
@@ -38,6 +41,21 @@ Champs principaux :
 - `sensor.incendies_proches`: nombre d'incendies dans le perimetre.
 - `sensor.distance_incendie_le_plus_proche`: distance en km du signalement le plus proche.
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
+
+## Exemple de carte
+
+Apres une premiere alerte, ajoutez les entites `device_tracker` creees par PyroVeille dans une carte Home Assistant :
+
+```yaml
+type: map
+title: Incendies proches
+default_zoom: 9
+hours_to_show: 24
+entities:
+  - entity: device_tracker.nom_de_l_incendie_pyroveille
+```
+
+Les noms exacts des entites sont visibles dans `Parametres > Appareils et services > Entites`, en filtrant sur `PyroVeille`.
 
 ## Automatisation mobile
 

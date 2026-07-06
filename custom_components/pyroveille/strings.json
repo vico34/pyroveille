@@ -10,6 +10,8 @@
           "departments": "Departements a inclure",
           "only_active": "Limiter aux feux en cours",
           "create_persistent_notifications": "Creer une notification persistante Home Assistant",
+          "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
+          "telegram_notify_service": "Service Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
           "api_base_url": "URL API feuxdeforet.fr"
         }
@@ -18,6 +20,7 @@
     "error": {
       "invalid_address": "Adresse invalide.",
       "address_not_found": "Adresse introuvable. Essayez avec une adresse plus precise.",
+      "invalid_notify_service": "Service notify invalide.",
       "invalid_radius": "Le rayon doit etre superieur a 0."
     },
     "abort": {
@@ -34,6 +37,8 @@
           "departments": "Departements a inclure",
           "only_active": "Limiter aux feux en cours",
           "create_persistent_notifications": "Creer une notification persistante Home Assistant",
+          "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
+          "telegram_notify_service": "Service Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
           "api_base_url": "URL API feuxdeforet.fr"
         }

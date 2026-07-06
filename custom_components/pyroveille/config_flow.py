@@ -16,17 +16,21 @@ from .const import (
     CONF_CENTER_LATITUDE,
     CONF_CENTER_LONGITUDE,
     CONF_CREATE_PERSISTENT_NOTIFICATIONS,
+    CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
     CONF_GEOCODE_MISSING_COORDINATES,
     CONF_ONLY_ACTIVE,
     CONF_RADIUS_KM,
+    CONF_TELEGRAM_NOTIFY_SERVICE,
     DEFAULT_API_BASE_URL,
     DEFAULT_ADDRESS,
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
+    DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
     DEFAULT_NAME,
     DEFAULT_ONLY_ACTIVE,
     DEFAULT_RADIUS_KM,
+    DEFAULT_TELEGRAM_NOTIFY_SERVICE,
     DOMAIN,
 )
 from .util import parse_departments
@@ -46,8 +50,11 @@ class FeuxDeForetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             coords: tuple[float, float] | None = None
             address = str(user_input.get(CONF_ADDRESS, "")).strip()
+            _normalize_telegram_service(user_input)
             if not address:
                 errors[CONF_ADDRESS] = "invalid_address"
+            if user_input.get(CONF_CREATE_TELEGRAM_NOTIFICATIONS) and not user_input.get(CONF_TELEGRAM_NOTIFY_SERVICE):
+                errors[CONF_TELEGRAM_NOTIFY_SERVICE] = "invalid_notify_service"
             try:
                 radius_km = float(user_input[CONF_RADIUS_KM])
             except (TypeError, ValueError):
@@ -98,8 +105,11 @@ class FeuxDeForetOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             coords: tuple[float, float] | None = None
             address = str(user_input.get(CONF_ADDRESS, "")).strip()
+            _normalize_telegram_service(user_input)
             if not address:
                 errors[CONF_ADDRESS] = "invalid_address"
+            if user_input.get(CONF_CREATE_TELEGRAM_NOTIFICATIONS) and not user_input.get(CONF_TELEGRAM_NOTIFY_SERVICE):
+                errors[CONF_TELEGRAM_NOTIFY_SERVICE] = "invalid_notify_service"
             try:
                 radius_km = float(user_input[CONF_RADIUS_KM])
             except (TypeError, ValueError):
@@ -161,9 +171,29 @@ def _schema(defaults: dict[str, Any], *, include_center: bool = True) -> vol.Sch
     ] = bool
     fields[
         vol.Required(
+            CONF_CREATE_TELEGRAM_NOTIFICATIONS,
+            default=defaults.get(CONF_CREATE_TELEGRAM_NOTIFICATIONS, DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS),
+        )
+    ] = bool
+    fields[
+        vol.Optional(
+            CONF_TELEGRAM_NOTIFY_SERVICE,
+            default=defaults.get(CONF_TELEGRAM_NOTIFY_SERVICE, DEFAULT_TELEGRAM_NOTIFY_SERVICE),
+        )
+    ] = selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT))
+    fields[
+        vol.Required(
             CONF_GEOCODE_MISSING_COORDINATES,
             default=defaults.get(CONF_GEOCODE_MISSING_COORDINATES, DEFAULT_GEOCODE_MISSING_COORDINATES),
         )
     ] = bool
     fields[vol.Required(CONF_API_BASE_URL, default=defaults.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL))] = str
     return vol.Schema(fields)
+
+
+def _normalize_telegram_service(user_input: dict[str, Any]) -> None:
+    """Normalize the Telegram notify service name in-place."""
+    service = str(user_input.get(CONF_TELEGRAM_NOTIFY_SERVICE, "")).strip()
+    if service.startswith("notify."):
+        service = service.removeprefix("notify.")
+    user_input[CONF_TELEGRAM_NOTIFY_SERVICE] = service

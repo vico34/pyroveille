@@ -15,17 +15,21 @@ from .const import (
     CONF_CENTER_LATITUDE,
     CONF_CENTER_LONGITUDE,
     CONF_CREATE_PERSISTENT_NOTIFICATIONS,
+    CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
     CONF_GEOCODE_MISSING_COORDINATES,
     CONF_ONLY_ACTIVE,
     CONF_RADIUS_KM,
+    CONF_TELEGRAM_NOTIFY_SERVICE,
     DEFAULT_API_BASE_URL,
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
+    DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
     DEFAULT_MAX_ITEMS,
     DEFAULT_ONLY_ACTIVE,
     DEFAULT_RADIUS_KM,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_TELEGRAM_NOTIFY_SERVICE,
     DOMAIN,
     EVENT_NEARBY_FIRE,
 )
@@ -56,6 +60,18 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 data.get(CONF_CREATE_PERSISTENT_NOTIFICATIONS, DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS),
             )
         )
+        self.create_telegram_notifications = bool(
+            options.get(
+                CONF_CREATE_TELEGRAM_NOTIFICATIONS,
+                data.get(CONF_CREATE_TELEGRAM_NOTIFICATIONS, DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS),
+            )
+        )
+        self.telegram_notify_service = str(
+            options.get(
+                CONF_TELEGRAM_NOTIFY_SERVICE,
+                data.get(CONF_TELEGRAM_NOTIFY_SERVICE, DEFAULT_TELEGRAM_NOTIFY_SERVICE),
+            )
+        ).removeprefix("notify.")
         self._seen_nearby_ids: set[str] = set()
         self.client = FeuxDeForetClient(
             hass,
@@ -136,6 +152,29 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                     title="Alerte incendie a proximite",
                     notification_id=f"{DOMAIN}_{alert.id}",
                 )
+            if self.create_telegram_notifications:
+                await self._async_send_telegram_notification(alert)
+
+    async def _async_send_telegram_notification(self, alert: FireAlert) -> None:
+        """Send a Telegram notification through an existing Home Assistant notify service."""
+        if not self.telegram_notify_service:
+            return
+        if not self.hass.services.has_service("notify", self.telegram_notify_service):
+            _LOGGER.info(
+                "Telegram notifications enabled but notify.%s is not available",
+                self.telegram_notify_service,
+            )
+            return
+        await self.hass.services.async_call(
+            "notify",
+            self.telegram_notify_service,
+            {
+                "title": "Alerte incendie a proximite",
+                "message": self._notification_message(alert),
+                "data": {"url": alert.url} if alert.url else {},
+            },
+            blocking=False,
+        )
 
     def _notification_message(self, alert: FireAlert) -> str:
         """Build persistent notification content."""
