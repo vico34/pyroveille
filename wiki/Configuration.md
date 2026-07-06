@@ -4,9 +4,10 @@ PyroVeille se configure depuis l'interface Home Assistant.
 
 ## Zone surveillee
 
-- `Latitude du centre`: latitude du centre de surveillance.
-- `Longitude du centre`: longitude du centre de surveillance.
+- `Adresse du centre`: adresse utilisee comme centre de surveillance.
 - `Rayon`: rayon en kilometres.
+
+L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les coordonnees calculees en interne pour filtrer les signalements dans le rayon choisi.
 
 ## Filtres
 

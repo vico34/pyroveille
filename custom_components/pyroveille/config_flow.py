@@ -9,7 +9,9 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
+from .api import async_geocode_address
 from .const import (
+    CONF_ADDRESS,
     CONF_API_BASE_URL,
     CONF_CENTER_LATITUDE,
     CONF_CENTER_LONGITUDE,
@@ -19,6 +21,7 @@ from .const import (
     CONF_ONLY_ACTIVE,
     CONF_RADIUS_KM,
     DEFAULT_API_BASE_URL,
+    DEFAULT_ADDRESS,
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
     DEFAULT_NAME,
@@ -41,16 +44,28 @@ class FeuxDeForetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            if not -90 <= float(user_input[CONF_CENTER_LATITUDE]) <= 90:
-                errors[CONF_CENTER_LATITUDE] = "invalid_latitude"
-            if not -180 <= float(user_input[CONF_CENTER_LONGITUDE]) <= 180:
-                errors[CONF_CENTER_LONGITUDE] = "invalid_longitude"
-            if float(user_input[CONF_RADIUS_KM]) <= 0:
+            coords: tuple[float, float] | None = None
+            address = str(user_input.get(CONF_ADDRESS, "")).strip()
+            if not address:
+                errors[CONF_ADDRESS] = "invalid_address"
+            try:
+                radius_km = float(user_input[CONF_RADIUS_KM])
+            except (TypeError, ValueError):
+                radius_km = 0
+            if radius_km <= 0:
                 errors[CONF_RADIUS_KM] = "invalid_radius"
+
+            if not errors:
+                coords = await async_geocode_address(self.hass, address)
+                if coords is None:
+                    errors[CONF_ADDRESS] = "address_not_found"
 
             if not errors:
                 await self.async_set_unique_id("default")
                 self._abort_if_unique_id_configured()
+                user_input[CONF_ADDRESS] = address
+                user_input[CONF_CENTER_LATITUDE] = coords[0]
+                user_input[CONF_CENTER_LONGITUDE] = coords[1]
                 user_input[CONF_DEPARTMENTS] = ",".join(sorted(parse_departments(user_input.get(CONF_DEPARTMENTS))))
                 return self.async_create_entry(title=DEFAULT_NAME, data=user_input)
 
@@ -81,16 +96,32 @@ class FeuxDeForetOptionsFlow(config_entries.OptionsFlow):
         """Manage options."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            if float(user_input[CONF_RADIUS_KM]) <= 0:
+            coords: tuple[float, float] | None = None
+            address = str(user_input.get(CONF_ADDRESS, "")).strip()
+            if not address:
+                errors[CONF_ADDRESS] = "invalid_address"
+            try:
+                radius_km = float(user_input[CONF_RADIUS_KM])
+            except (TypeError, ValueError):
+                radius_km = 0
+            if radius_km <= 0:
                 errors[CONF_RADIUS_KM] = "invalid_radius"
             if not errors:
+                coords = await async_geocode_address(self.hass, address)
+                if coords is None:
+                    errors[CONF_ADDRESS] = "address_not_found"
+
+            if not errors:
+                user_input[CONF_ADDRESS] = address
+                user_input[CONF_CENTER_LATITUDE] = coords[0]
+                user_input[CONF_CENTER_LONGITUDE] = coords[1]
                 user_input[CONF_DEPARTMENTS] = ",".join(sorted(parse_departments(user_input.get(CONF_DEPARTMENTS))))
                 return self.async_create_entry(title="", data=user_input)
 
         defaults = {**self._config_entry.data, **self._config_entry.options}
         return self.async_show_form(
             step_id="init",
-            data_schema=_schema(defaults, include_center=False),
+            data_schema=_schema(defaults),
             errors=errors,
         )
 
@@ -101,16 +132,10 @@ def _schema(defaults: dict[str, Any], *, include_center: bool = True) -> vol.Sch
     if include_center:
         fields[
             vol.Required(
-                CONF_CENTER_LATITUDE,
-                default=defaults.get(CONF_CENTER_LATITUDE, 46.603354),
+                CONF_ADDRESS,
+                default=defaults.get(CONF_ADDRESS, DEFAULT_ADDRESS),
             )
-        ] = selector.NumberSelector(selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX))
-        fields[
-            vol.Required(
-                CONF_CENTER_LONGITUDE,
-                default=defaults.get(CONF_CENTER_LONGITUDE, 1.888334),
-            )
-        ] = selector.NumberSelector(selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX))
+        ] = selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT))
 
     fields[
         vol.Required(CONF_RADIUS_KM, default=defaults.get(CONF_RADIUS_KM, DEFAULT_RADIUS_KM))

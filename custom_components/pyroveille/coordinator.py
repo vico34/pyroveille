@@ -45,8 +45,8 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         self.config_entry = entry
         data = entry.data
         options = entry.options
-        self.center_latitude = float(data.get(CONF_CENTER_LATITUDE))
-        self.center_longitude = float(data.get(CONF_CENTER_LONGITUDE))
+        self.center_latitude = float(options.get(CONF_CENTER_LATITUDE, data.get(CONF_CENTER_LATITUDE)))
+        self.center_longitude = float(options.get(CONF_CENTER_LONGITUDE, data.get(CONF_CENTER_LONGITUDE)))
         self.radius_km = float(options.get(CONF_RADIUS_KM, data.get(CONF_RADIUS_KM, DEFAULT_RADIUS_KM)))
         self.departments = parse_departments(options.get(CONF_DEPARTMENTS, data.get(CONF_DEPARTMENTS)))
         self.only_active = bool(options.get(CONF_ONLY_ACTIVE, data.get(CONF_ONLY_ACTIVE, DEFAULT_ONLY_ACTIVE)))

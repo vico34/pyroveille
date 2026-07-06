@@ -5,7 +5,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 ## Fonctionnalites
 
 - Recuperation des signalements recents via la route publique `https://feuxdeforet.fr/api/signalements/recent`.
-- Selection d'une zone par latitude, longitude et rayon en kilometres.
+- Selection d'une zone par adresse et rayon en kilometres.
 - Filtre optionnel par departements.
 - Filtre optionnel sur les feux en cours uniquement.
 - Notification persistante Home Assistant lorsqu'un nouvel incendie entre dans le perimetre.
@@ -25,7 +25,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 
 Champs principaux :
 
-- `Latitude du centre` et `Longitude du centre`: centre de la zone surveillee.
+- `Adresse du centre`: adresse utilisee comme centre de la zone surveillee.
 - `Rayon`: perimetre de surveillance en kilometres.
 - `Departements a inclure`: optionnel, separes par virgules, exemple `13, 83, 34`.
 - `Limiter aux feux en cours`: ignore les signalements qui ne sont plus actifs.
@@ -37,7 +37,7 @@ Champs principaux :
 - `binary_sensor.alerte_incendie_proche`: actif si au moins un incendie est dans le perimetre.
 - `sensor.incendies_proches`: nombre d'incendies dans le perimetre.
 - `sensor.distance_incendie_le_plus_proche`: distance en km du signalement le plus proche.
-- `device_tracker.*`: un marqueur par incendie proche, visible sur la carte Home Assistant.
+- `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
 
 ## Automatisation mobile
 
@@ -63,4 +63,4 @@ action:
 
 Feux de Foret expose sur son site public une carte "Feux en cours" et une route JSON publique utilisee par le frontend. Au 6 juillet 2026, la route `https://feuxdeforet.fr/api/signalements/recent` renvoie notamment `id`, `title`, `commune`, `dept`, `url`, `dateIso`, `enCours` et `thumbnail`. Si des coordonnees sont ajoutees par la source, l'integration les utilisera directement.
 
-Lorsque les coordonnees ne sont pas publiees dans cette route, le placement carte est approximatif et base sur la commune. Les notifications doivent donc etre considerees comme une aide de surveillance, pas comme une source officielle d'alerte securite.
+L'adresse de surveillance et les communes sans coordonnees natives sont geocodees via Nominatim/OpenStreetMap. Lorsque les coordonnees ne sont pas publiees dans cette route, le placement carte est approximatif et base sur la commune. Les notifications doivent donc etre considerees comme une aide de surveillance, pas comme une source officielle d'alerte securite.

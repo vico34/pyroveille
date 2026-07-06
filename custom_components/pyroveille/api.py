@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 from aiohttp import ClientError, ClientSession
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_FEUXDEFORET_BASE_URL, DEFAULT_MAX_ITEMS
@@ -121,31 +122,7 @@ class FeuxDeForetClient:
 
     async def _async_geocode(self, query: str) -> tuple[float, float] | None:
         """Resolve a commune to approximate coordinates."""
-        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
-        params = {"q": query, "format": "jsonv2", "limit": "1", "countrycodes": "fr"}
-        try:
-            async with self._session.get(
-                NOMINATIM_URL,
-                headers=headers,
-                params=params,
-                timeout=20,
-            ) as response:
-                if response.status >= 400:
-                    _LOGGER.debug("Nominatim returned HTTP %s for %s", response.status, query)
-                    return None
-                data = await response.json(content_type=None)
-        except (ClientError, TimeoutError) as err:
-            _LOGGER.debug("Could not geocode %s: %s", query, err)
-            return None
-
-        if not isinstance(data, list) or not data:
-            return None
-        first = data[0]
-        latitude = self._float(first.get("lat"))
-        longitude = self._float(first.get("lon"))
-        if latitude is None or longitude is None:
-            return None
-        return latitude, longitude
+        return await _async_geocode_with_session(self._session, query)
 
     @staticmethod
     def _string(value: Any) -> str | None:
@@ -170,3 +147,41 @@ class FeuxDeForetClient:
             return datetime.fromisoformat(text)
         except ValueError:
             return None
+
+
+async def async_geocode_address(hass: HomeAssistant, address: str) -> tuple[float, float] | None:
+    """Resolve a user-entered address to coordinates."""
+    session = async_get_clientsession(hass)
+    return await _async_geocode_with_session(session, address)
+
+
+async def _async_geocode_with_session(
+    session: ClientSession,
+    query: str,
+) -> tuple[float, float] | None:
+    """Resolve a French address or commune to approximate coordinates."""
+    headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+    params = {"q": query, "format": "jsonv2", "limit": "1", "countrycodes": "fr"}
+    try:
+        async with session.get(
+            NOMINATIM_URL,
+            headers=headers,
+            params=params,
+            timeout=20,
+        ) as response:
+            if response.status >= 400:
+                _LOGGER.debug("Nominatim returned HTTP %s for %s", response.status, query)
+                return None
+            data = await response.json(content_type=None)
+    except (ClientError, TimeoutError) as err:
+        _LOGGER.debug("Could not geocode %s: %s", query, err)
+        return None
+
+    if not isinstance(data, list) or not data:
+        return None
+    first = data[0]
+    latitude = FeuxDeForetClient._float(first.get("lat"))
+    longitude = FeuxDeForetClient._float(first.get("lon"))
+    if latitude is None or longitude is None:
+        return None
+    return latitude, longitude

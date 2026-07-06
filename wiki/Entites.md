@@ -10,6 +10,6 @@ PyroVeille cree les entites suivantes.
 
 ## Carte
 
-Des entites `device_tracker` sont creees pour les incendies proches disposant de coordonnees. Elles sont visibles dans la carte native Home Assistant.
+Des entites `device_tracker` GPS sont creees pour les incendies proches disposant de coordonnees. Elles exposent `latitude`, `longitude` et `source_type = gps`, ce qui les rend visibles dans la carte native Home Assistant.
 
 Si la source ne fournit pas de coordonnees, PyroVeille peut geocoder la commune pour obtenir une position approximative.
