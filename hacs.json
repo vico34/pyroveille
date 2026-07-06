@@ -1,6 +1,7 @@
 {
   "name": "PyroVeille",
   "render_readme": true,
+  "country": "FR",
   "domains": ["binary_sensor", "sensor", "device_tracker"],
   "homeassistant": "2024.6.0"
 }
