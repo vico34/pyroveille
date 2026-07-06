@@ -19,7 +19,7 @@
     },
     "error": {
       "invalid_address": "Adresse invalide.",
-      "address_not_found": "Adresse introuvable. Essayez avec une adresse plus precise.",
+      "address_not_found": "Adresse introuvable. Essayez avec une adresse francaise plus precise, par exemple: 10 rue de la Paix, 75002 Paris.",
       "invalid_notify_service": "Service notify invalide.",
       "invalid_radius": "Le rayon doit etre superieur a 0."
     },

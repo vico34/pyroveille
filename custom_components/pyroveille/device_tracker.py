@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.config_entries import ConfigEntry
@@ -11,6 +13,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import FeuxDeForetDataCoordinator
 from .entity import FeuxDeForetEntity
+
+_ACTIVE_FIRE_COLOR = "#e53935"
+_INACTIVE_FIRE_COLOR = "#757575"
 
 
 async def async_setup_entry(
@@ -93,4 +98,24 @@ class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):
     def extra_state_attributes(self) -> dict[str, object]:
         """Return fire details."""
         alert = self._alert
-        return alert.as_dict() if alert else {"id": self._alert_id, "active": False}
+        if not alert:
+            return {"id": self._alert_id, "active": False, "fire_status": "unknown"}
+        return {
+            **alert.as_dict(),
+            "fire_status": "active" if alert.active else "inactive",
+            "marker_color": _ACTIVE_FIRE_COLOR if alert.active else _INACTIVE_FIRE_COLOR,
+        }
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return a colored fire marker for map cards."""
+        alert = self._alert
+        if alert is None:
+            return None
+        color = _ACTIVE_FIRE_COLOR if alert.active else _INACTIVE_FIRE_COLOR
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="30" fill="{color}"/>
+<path fill="#ffffff" d="M34.8 6.6c-6.5 5.8-9 12.1-7.4 18.8.8 3.1-.6 6.1-3.6 7.7-2.4 1.3-5.2.8-7.1-1.2-4.1 5-6.1 10.1-6.1 15.1 0 8.2 6.4 14.2 21.4 14.2s21.4-6 21.4-14.2c0-7.4-5.1-13.8-10.8-19.6.2 3.8-1.4 6.8-4.6 8.6-1.7.9-3.9-.4-3.7-2.4.8-8.3-7-12.2.5-27z"/>
+<path fill="{color}" d="M32 29l8 18h-5v10h-6V47h-5l8-18z"/>
+</svg>"""
+        return f"data:image/svg+xml;utf8,{quote(svg)}"

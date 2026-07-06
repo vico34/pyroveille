@@ -17,6 +17,7 @@ from .models import FireAlert
 _LOGGER = logging.getLogger(__name__)
 
 USER_AGENT = "HomeAssistant-FeuxDeForetAlert/0.1"
+ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
 
@@ -160,6 +161,64 @@ async def _async_geocode_with_session(
     query: str,
 ) -> tuple[float, float] | None:
     """Resolve a French address or commune to approximate coordinates."""
+    if coords := await _async_geocode_adresse_gouv(session, query):
+        return coords
+
+    for candidate in _geocode_queries(query):
+        if coords := await _async_geocode_nominatim(session, candidate):
+            return coords
+
+    return None
+
+
+async def _async_geocode_adresse_gouv(
+    session: ClientSession,
+    query: str,
+) -> tuple[float, float] | None:
+    """Resolve a French address using the official Adresse API."""
+    headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+    params = {"q": query, "limit": "1"}
+    try:
+        async with session.get(
+            ADRESSE_GOUV_URL,
+            headers=headers,
+            params=params,
+            timeout=20,
+        ) as response:
+            if response.status >= 400:
+                _LOGGER.debug("Adresse API returned HTTP %s for %s", response.status, query)
+                return None
+            data = await response.json(content_type=None)
+    except (ClientError, TimeoutError) as err:
+        _LOGGER.debug("Could not geocode %s with Adresse API: %s", query, err)
+        return None
+
+    if not isinstance(data, dict):
+        return None
+    features = data.get("features")
+    if not isinstance(features, list) or not features:
+        return None
+    first = features[0]
+    if not isinstance(first, dict):
+        return None
+    geometry = first.get("geometry")
+    if not isinstance(geometry, dict):
+        return None
+    coordinates = geometry.get("coordinates")
+    if not isinstance(coordinates, list) or len(coordinates) < 2:
+        return None
+    longitude = FeuxDeForetClient._float(coordinates[0])
+    latitude = FeuxDeForetClient._float(coordinates[1])
+    if latitude is None or longitude is None:
+        return None
+    return latitude, longitude
+
+
+async def _async_geocode_nominatim(
+    session: ClientSession,
+    query: str,
+) -> tuple[float, float] | None:
+    """Resolve a French address or commune using Nominatim."""
     headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
     params = {"q": query, "format": "jsonv2", "limit": "1", "countrycodes": "fr"}
     try:
@@ -185,3 +244,12 @@ async def _async_geocode_with_session(
     if latitude is None or longitude is None:
         return None
     return latitude, longitude
+
+
+def _geocode_queries(query: str) -> list[str]:
+    """Return query variants for tolerant geocoding."""
+    clean_query = " ".join(query.replace("\n", " ").split())
+    queries = [clean_query]
+    if "france" not in clean_query.lower():
+        queries.append(f"{clean_query}, France")
+    return list(dict.fromkeys(queries))

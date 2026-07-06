@@ -24,6 +24,31 @@ action:
 
 PyroVeille peut envoyer directement une notification Telegram si l'integration Telegram de Home Assistant expose un service `notify`.
 
+### Cote Home Assistant
+
+Configurez Telegram dans Home Assistant avant d'activer l'option PyroVeille. Une fois Telegram configure, verifiez le nom du service dans `Outils de developpement > Services`. Le service attendu ressemble a :
+
+```text
+notify.telegram
+```
+
+ou :
+
+```text
+notify.telegram_maison
+```
+
+Vous pouvez tester le service depuis les outils de developpement avec :
+
+```yaml
+service: notify.telegram
+data:
+  title: Test PyroVeille
+  message: Telegram est pret pour PyroVeille.
+```
+
+### Cote PyroVeille
+
 Dans les options PyroVeille :
 
 - activez `Notifier via Telegram` ;

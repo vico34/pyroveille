@@ -44,18 +44,18 @@ Champs principaux :
 
 ## Exemple de carte
 
-Apres une premiere alerte, ajoutez les entites `device_tracker` creees par PyroVeille dans une carte Home Assistant :
+Apres une premiere alerte, ajoutez les entites `device_tracker` creees par PyroVeille dans une carte Home Assistant. La carte native `map` utilise OpenStreetMap :
 
 ```yaml
 type: map
-title: Incendies proches
+title: Incendies PyroVeille
 default_zoom: 9
 hours_to_show: 24
 entities:
   - entity: device_tracker.nom_de_l_incendie_pyroveille
 ```
 
-Les noms exacts des entites sont visibles dans `Parametres > Appareils et services > Entites`, en filtrant sur `PyroVeille`.
+Les noms exacts des entites sont visibles dans `Parametres > Appareils et services > Entites`, en filtrant sur `PyroVeille`. Les marqueurs PyroVeille sont rouges pour les feux actifs et gris pour les feux inactifs.
 
 ## Automatisation mobile
 
