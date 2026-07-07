@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.2
+
+- Ajout des entites `device_tracker.pyroveille_fire_*_satellite_zone`.
+- Affichage possible de la zone satellite estimee comme cercle GPS via `location_accuracy`.
+- Ajout de la liste `satellite_zone_entities` dans les attributs de diagnostic de mise a jour.
+
 ## 0.4.0-beta.1
 
 - Ajout beta des zones satellite estimees via NASA FIRMS.

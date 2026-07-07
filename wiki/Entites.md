@@ -34,6 +34,14 @@ device_tracker.pyroveille_hotspot_<id>
 
 Ces points representent des detections satellite proches d'un incendie. Ils aident a visualiser une zone active estimee, mais ne sont pas un contour officiel.
 
+Depuis `0.4.0-beta.2`, PyroVeille cree aussi une entite de zone satellite estimee par incendie quand des hotspots FIRMS sont disponibles :
+
+```text
+device_tracker.pyroveille_fire_<id>_satellite_zone
+```
+
+Cette entite est centree sur les hotspots detectes et utilise `location_accuracy` pour exposer le rayon estime en metres. Sur la carte native Home Assistant, elle peut donc apparaitre comme un cercle GPS autour de la zone estimee.
+
 ## Exemple de carte Lovelace
 
 Apres une premiere detection, Home Assistant cree une entite `device_tracker` par incendie proche. La carte native `map` de Home Assistant utilise OpenStreetMap. Ajoutez les entites PyroVeille dans cette carte :
@@ -80,6 +88,7 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 - gris : feu inactif ou termine ;
 - orange : point de projection automatique, avec libelle temporel de progression.
 - orange fonce : hotspot satellite FIRMS beta.
+- cercle orange transparent : zone satellite estimee FIRMS beta, si la carte affiche le cercle de precision GPS.
 
 ## Captures
 
@@ -94,5 +103,6 @@ Chaque entite `device_tracker` contient aussi :
 - `bearing`: direction estimee de projection en degres pour les marqueurs de projection ;
 - `projection_label`: libelle temporel affiche sur les marqueurs de projection.
 - `satellite_zone`: zone satellite estimee pour les marqueurs d'incendie, si FIRMS est active et si des hotspots sont disponibles.
+- `estimated_radius_m`: rayon estime en metres sur les entites `device_tracker.pyroveille_fire_*_satellite_zone`.
 
 Si votre tableau de bord n'affiche pas l'image du marqueur, supprimez puis rajoutez la carte apres la premiere detection, ou ajoutez explicitement les nouvelles entites `device_tracker` PyroVeille dans la liste `entities`.

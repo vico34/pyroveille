@@ -68,6 +68,7 @@ class FireTrackerPlatform:
         self._known_ids: set[str] = set()
         self._known_projection_ids: set[tuple[str, float]] = set()
         self._known_hotspot_ids: set[str] = set()
+        self._known_satellite_zone_ids: set[str] = set()
 
     def async_update_entities(self) -> None:
         """Add trackers for newly discovered nearby fires."""
@@ -84,6 +85,11 @@ class FireTrackerPlatform:
                         continue
                     self._known_projection_ids.add(projection_id)
                     new_entities.append(FireProjectionTrackerEntity(self._coordinator, alert.id, step))
+
+            if self._coordinator.satellite_zone_for_alert(alert.id) is not None:
+                if alert.id not in self._known_satellite_zone_ids:
+                    self._known_satellite_zone_ids.add(alert.id)
+                    new_entities.append(FireSatelliteZoneTrackerEntity(self._coordinator, alert.id))
 
             for hotspot in self._coordinator.fire_hotspots.get(alert.id, []):
                 if hotspot.hotspot_id in self._known_hotspot_ids:
@@ -269,6 +275,87 @@ class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
             return None
         distance = projection.distance_km * self._step
         return destination_point(alert.latitude, alert.longitude, projection.bearing, distance)
+
+
+class FireSatelliteZoneTrackerEntity(FeuxDeForetEntity, TrackerEntity):
+    """Represent one estimated NASA FIRMS satellite zone as a GPS tracker."""
+
+    _attr_icon = "mdi:circle-opacity"
+    _attr_source_type = SourceType.GPS
+
+    def __init__(self, coordinator: FeuxDeForetDataCoordinator, alert_id: str) -> None:
+        """Initialize satellite zone tracker."""
+        super().__init__(coordinator)
+        self._alert_id = alert_id
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_fire_{alert_id}_satellite_zone"
+        self._attr_suggested_object_id = f"pyroveille_fire_{slugify(alert_id)}_satellite_zone"
+
+    @property
+    def _alert(self) -> FireAlert | None:
+        return next((alert for alert in self.coordinator.nearby_alerts if alert.id == self._alert_id), None)
+
+    @property
+    def _satellite_zone(self) -> dict[str, object] | None:
+        return self.coordinator.satellite_zone_for_alert(self._alert_id)
+
+    @property
+    def available(self) -> bool:
+        """Return whether the satellite zone can be displayed."""
+        return self._satellite_zone is not None
+
+    @property
+    def name(self) -> str:
+        """Return satellite zone tracker name."""
+        alert = self._alert
+        title = alert.title if alert else f"Incendie {self._alert_id}"
+        return f"{title} zone satellite estimee"
+
+    @property
+    def latitude(self) -> float | None:
+        """Return satellite zone center latitude."""
+        zone = self._satellite_zone
+        return float(zone["center_latitude"]) if zone else None
+
+    @property
+    def longitude(self) -> float | None:
+        """Return satellite zone center longitude."""
+        zone = self._satellite_zone
+        return float(zone["center_longitude"]) if zone else None
+
+    @property
+    def location_accuracy(self) -> int:
+        """Return estimated zone radius in meters."""
+        zone = self._satellite_zone
+        if zone is None:
+            return 1000
+        return max(500, int(float(zone["estimated_radius_km"]) * 1000))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        """Return satellite zone details."""
+        zone = self._satellite_zone
+        if zone is None:
+            return {"id": self._alert_id, "satellite_zone": False}
+        return {
+            **zone,
+            "id": self._alert_id,
+            "satellite_zone": True,
+            "estimated_radius_m": self.location_accuracy,
+            "marker_color": _HOTSPOT_COLOR,
+            "warning": "Zone estimee depuis les hotspots satellite FIRMS, pas un contour officiel.",
+        }
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return a translucent satellite zone marker for map cards."""
+        if not self.available:
+            return None
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="28" fill="{_HOTSPOT_COLOR}" opacity="0.28"/>
+<circle cx="32" cy="32" r="28" fill="none" stroke="{_HOTSPOT_COLOR}" stroke-width="4" opacity="0.85"/>
+<circle cx="32" cy="32" r="7" fill="{_HOTSPOT_COLOR}" opacity="0.95"/>
+</svg>"""
+        return f"data:image/svg+xml;utf8,{quote(svg)}"
 
 
 class FireHotspotTrackerEntity(FeuxDeForetEntity, TrackerEntity):

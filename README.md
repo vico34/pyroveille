@@ -48,6 +48,7 @@ Champs principaux :
 - `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie.
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
 - `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible, avec un libelle temporel comme `+1h`.
+- `device_tracker.pyroveille_fire_*_satellite_zone`: zone satellite estimee FIRMS, affichee comme un cercle GPS quand des hotspots sont disponibles.
 - `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS en beta, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
 
 ## Apercu
@@ -105,7 +106,7 @@ La direction utilisee est la direction sous le vent. Les marqueurs de projection
 
 ## Beta : zones satellite FIRMS
 
-La version `0.4.0-beta.1` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS.
+La version `0.4.0-beta.2` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS.
 
 Options a configurer :
 
@@ -114,7 +115,13 @@ Options a configurer :
 - `Source satellite FIRMS`: source de donnees, par defaut `VIIRS S-NPP NRT`.
 - `Rayon de recherche FIRMS`: rayon autour de chaque incendie pour chercher les hotspots, par defaut `25 km`.
 
-Quand des hotspots sont disponibles, PyroVeille cree des entites `device_tracker.pyroveille_hotspot_*` visibles sur la carte et ajoute un attribut `satellite_zone` sur le marqueur de l'incendie.
+Quand des hotspots sont disponibles, PyroVeille cree :
+
+- des entites `device_tracker.pyroveille_hotspot_*` pour afficher les detections satellite ;
+- une entite `device_tracker.pyroveille_fire_*_satellite_zone` par incendie, centree sur les hotspots et avec `location_accuracy` egal au rayon estime ;
+- un attribut `satellite_zone` sur le marqueur principal de l'incendie.
+
+Sur la carte native Home Assistant, l'entite `device_tracker.pyroveille_fire_*_satellite_zone` permet d'afficher un cercle GPS correspondant a la zone estimee. Pour voir cette zone, ajoutez aussi ces entites dans votre carte ou utilisez le filtre automatique `device_tracker.pyroveille_*`.
 
 Important : cette zone est une estimation issue de detections satellite. Elle ne represente pas un contour officiel du feu ni une zone d'intervention.
 
