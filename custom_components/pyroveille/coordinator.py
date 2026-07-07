@@ -20,6 +20,7 @@ from .const import (
     CONF_CREATE_PERSISTENT_NOTIFICATIONS,
     CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
+    CONF_ENABLE_PROJECTIONS,
     CONF_GEOCODE_MISSING_COORDINATES,
     CONF_INCLUDE_LINK_IN_NOTIFICATIONS,
     CONF_NOTIFICATION_MAX_DISTANCE_KM,
@@ -32,6 +33,7 @@ from .const import (
     DEFAULT_AUTO_PROJECTION_WIND_FACTOR,
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
+    DEFAULT_ENABLE_PROJECTIONS,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
     DEFAULT_INCLUDE_LINK_IN_NOTIFICATIONS,
     DEFAULT_MAX_ITEMS,
@@ -94,6 +96,9 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 data.get(CONF_TELEGRAM_NOTIFY_SERVICE, DEFAULT_TELEGRAM_NOTIFY_SERVICE),
             )
         ).removeprefix("notify.")
+        self.enable_projections = bool(
+            options.get(CONF_ENABLE_PROJECTIONS, data.get(CONF_ENABLE_PROJECTIONS, DEFAULT_ENABLE_PROJECTIONS))
+        )
         self.auto_projection_horizon_hours = DEFAULT_AUTO_PROJECTION_HORIZON_HOURS
         self.auto_projection_uncertainty_km = DEFAULT_AUTO_PROJECTION_UNCERTAINTY_KM
         self.auto_projection_wind_factor = DEFAULT_AUTO_PROJECTION_WIND_FACTOR
@@ -126,6 +131,8 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
 
     def projection_for_alert(self, alert: FireAlert) -> FireProjection | None:
         """Return weather-based automatic projection for an alert."""
+        if not self.enable_projections:
+            return None
         weather = self.local_weather.get(alert.id)
         if weather is None or weather.downwind_bearing is None or weather.wind_speed_kmh is None:
             return None
@@ -252,6 +259,9 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
 
     async def _async_update_local_weather(self, alerts: list[FireAlert]) -> None:
         """Fetch local weather for nearby alerts with coordinates."""
+        if not self.enable_projections:
+            self.local_weather = {}
+            return
         located_alerts = [alert for alert in alerts if alert.has_location]
         weather_results = await asyncio.gather(
             *[

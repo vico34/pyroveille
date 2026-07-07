@@ -38,6 +38,7 @@ Champs principaux :
 - `Service Telegram notify`: nom du service Telegram, par defaut `telegram` pour appeler `notify.telegram`.
 - `Mode de geocodage`: `Adresse puis commune` utilise l'API Adresse officielle puis Nominatim en secours. `Adresse stricte` limite le geocodage a l'API Adresse officielle.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
+- `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
 
 ## Entites creees
 
@@ -46,7 +47,7 @@ Champs principaux :
 - `sensor.distance_incendie_le_plus_proche`: distance en km du signalement le plus proche.
 - `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie.
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
-- `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible.
+- `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible, avec un libelle temporel comme `+1h`.
 
 ## Apercu
 
@@ -91,7 +92,7 @@ show_empty: false
 
 ## Projection automatique de trajectoire
 
-La version `0.3.0` genere automatiquement une projection pour chaque incendie proche disposant de coordonnees et d'une meteo locale disponible.
+La version `0.3.0` genere automatiquement une projection pour chaque incendie proche disposant de coordonnees et d'une meteo locale disponible, si l'option `Activer les projections automatiques` est activee.
 
 PyroVeille recupere automatiquement le vent courant autour de l'incendie via Open-Meteo :
 
@@ -99,7 +100,7 @@ PyroVeille recupere automatiquement le vent courant autour de l'incendie via Ope
 - direction du vent a 10 m ;
 - rafales a 10 m.
 
-La direction affichee est la direction sous le vent. La vitesse de progression reste une heuristique interne derivee du vent, pas une prevision officielle. Aucun parametre manuel n'est demande a l'utilisateur.
+La direction utilisee est la direction sous le vent. Les marqueurs de projection affichent le delai estime depuis le depart du feu, par exemple `+1h`, `+2h`, `+3h` ou `+4h` avec l'horizon par defaut. La vitesse de progression reste une heuristique interne derivee du vent, pas une prevision officielle. Aucun parametre manuel n'est demande a l'utilisateur.
 
 ## Automatisation mobile
 

@@ -29,6 +29,7 @@ async def async_get_config_entry_diagnostics(
             fire_id: weather.as_dict() for fire_id, weather in coordinator.local_weather.items()
         },
         "automatic_projections": {
+            "enabled": coordinator.enable_projections,
             "horizon_hours": coordinator.auto_projection_horizon_hours,
             "uncertainty_km": coordinator.auto_projection_uncertainty_km,
             "wind_factor": coordinator.auto_projection_wind_factor,

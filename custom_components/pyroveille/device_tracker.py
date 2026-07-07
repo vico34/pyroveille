@@ -23,6 +23,24 @@ _PROJECTION_COLOR = "#fb8c00"
 _PROJECTION_STEPS = (0.25, 0.5, 0.75, 1.0)
 
 
+def _format_projection_label(hours: float) -> str:
+    """Return a compact time label for projection markers."""
+    if hours <= 0:
+        return "+0h"
+
+    rounded_hours = round(hours)
+    if abs(hours - rounded_hours) < 0.05:
+        return f"+{rounded_hours}h"
+
+    whole_hours = int(hours)
+    minutes = round((hours - whole_hours) * 60)
+    if minutes == 60:
+        return f"+{whole_hours + 1}h"
+    if whole_hours <= 0:
+        return f"+{minutes}m"
+    return f"+{whole_hours}h{minutes:02d}"
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -139,7 +157,7 @@ class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):
 class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
     """Represent one projected fire progression point as a GPS tracker."""
 
-    _attr_icon = "mdi:arrow-up-bold"
+    _attr_icon = "mdi:clock-outline"
     _attr_source_type = SourceType.GPS
 
     def __init__(self, coordinator: FeuxDeForetDataCoordinator, alert_id: str, step: float) -> None:
@@ -205,11 +223,13 @@ class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
             return {"id": self._alert_id, "projection": False}
         elapsed_hours = projection.horizon_hours * self._step
         projected_distance = projection.speed_kmh * elapsed_hours
+        label = _format_projection_label(elapsed_hours)
         weather = self.coordinator.local_weather.get(self._alert_id)
         return {
             **projection.as_dict(),
             "id": self._alert_id,
             "projection": True,
+            "projection_label": label,
             "projection_step": self._step,
             "projection_elapsed_hours": round(elapsed_hours, 2),
             "projection_distance_km": round(projected_distance, 2),
@@ -222,9 +242,14 @@ class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
         """Return a projection marker for map cards."""
         if not self.available:
             return None
+        projection = self._projection
+        if projection is None:
+            return None
+        label = _format_projection_label(projection.horizon_hours * self._step)
+        font_size = 19 if len(label) <= 4 else 15
         svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <circle cx="32" cy="32" r="30" fill="{_PROJECTION_COLOR}"/>
-<path fill="#ffffff" d="M32 9l18 32H38v14H26V41H14L32 9z"/>
+<text x="32" y="37" text-anchor="middle" font-family="Arial, sans-serif" font-size="{font_size}" font-weight="700" fill="#ffffff">{label}</text>
 </svg>"""
         return f"data:image/svg+xml;utf8,{quote(svg)}"
 

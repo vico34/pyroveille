@@ -23,6 +23,7 @@ L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les co
 - `Notifier via Telegram`: envoie aussi l'alerte via Telegram si le service `notify` configure est disponible.
 - `Service Telegram notify`: nom du service Telegram, par defaut `telegram` pour appeler `notify.telegram`. Si votre service s'appelle `notify.telegram_maison`, saisissez `telegram_maison`.
 - `Geocoder les communes sans coordonnees natives`: place approximativement les signalements sur la carte quand la source ne fournit pas de latitude/longitude.
+- `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
 
 ## Configuration Telegram
 
@@ -50,6 +51,6 @@ Si le service Telegram n'est pas disponible, PyroVeille ignore l'envoi Telegram 
 
 ## Projections automatiques
 
-Les projections ne se configurent pas dans le formulaire principal et ne demandent pas de parametre manuel. Depuis `0.3.0`, PyroVeille recupere automatiquement la meteo locale Open-Meteo pour chaque incendie proche, puis cree des points de projection sur la carte si le vent local est disponible.
+Depuis `0.3.1`, les projections peuvent etre activees ou desactivees dans les options de l'integration. Quand elles sont activees, PyroVeille recupere automatiquement la meteo locale Open-Meteo pour chaque incendie proche, puis cree des points de projection sur la carte si le vent local est disponible. Quand elles sont desactivees, PyroVeille ne recupere pas la meteo locale et ne cree pas de points de projection.
 
 Voir [Projections](Projections) pour le fonctionnement et les limites.

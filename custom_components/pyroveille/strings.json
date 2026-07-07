@@ -16,6 +16,7 @@
           "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
           "telegram_notify_service": "Service Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
+          "enable_projections": "Activer les projections automatiques",
           "api_base_url": "URL API feuxdeforet.fr"
         }
       }
@@ -47,6 +48,7 @@
           "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
           "telegram_notify_service": "Service Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
+          "enable_projections": "Activer les projections automatiques",
           "api_base_url": "URL API feuxdeforet.fr"
         }
       }

@@ -24,7 +24,7 @@ device_tracker.pyroveille_fire_<id>_projection_75
 device_tracker.pyroveille_fire_<id>_projection_100
 ```
 
-Ces points representent 25%, 50%, 75% et 100% de l'horizon interne de projection.
+Ces points representent 25%, 50%, 75% et 100% de l'horizon interne de projection. Leur marqueur affiche un libelle temporel, par exemple `+1h`, `+2h`, `+3h` ou `+4h` avec l'horizon par defaut.
 
 ## Exemple de carte Lovelace
 
@@ -70,7 +70,7 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 
 - rouge : feu actif ;
 - gris : feu inactif ou termine ;
-- orange : point de projection automatique.
+- orange : point de projection automatique, avec libelle temporel de progression.
 
 ## Captures
 
@@ -82,5 +82,7 @@ Chaque entite `device_tracker` contient aussi :
 
 - `fire_status`: `active` ou `inactive` ;
 - `marker_color`: couleur HTML du marqueur.
+- `bearing`: direction estimee de projection en degres pour les marqueurs de projection ;
+- `projection_label`: libelle temporel affiche sur les marqueurs de projection.
 
 Si votre tableau de bord n'affiche pas l'image du marqueur, supprimez puis rajoutez la carte apres la premiere detection, ou ajoutez explicitement les nouvelles entites `device_tracker` PyroVeille dans la liste `entities`.

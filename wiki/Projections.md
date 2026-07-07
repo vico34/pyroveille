@@ -1,6 +1,6 @@
 # Projections automatiques
 
-La projection de trajectoire automatique est disponible a partir de `0.3.0`.
+La projection de trajectoire automatique est disponible a partir de `0.3.0` et peut etre activee ou desactivee dans les options de l'integration depuis `0.3.1`.
 
 Important : PyroVeille ne calcule pas une prevision officielle de propagation. La source `feuxdeforet.fr` ne fournit pas de front de feu ni de trajectoire temporelle exploitable. La projection est donc une aide visuelle automatique basee sur la meteo locale, principalement le vent.
 
@@ -12,7 +12,7 @@ Pour chaque incendie proche avec coordonnees, PyroVeille interroge automatiqueme
 - direction du vent a 10 m ;
 - rafales a 10 m.
 
-La trajectoire utilise la direction sous le vent, soit la direction du vent retournee par la meteo + 180 degres. La vitesse de progression est estimee avec une heuristique interne a partir de la vitesse du vent. Aucun parametre manuel n'est demande.
+La trajectoire utilise la direction sous le vent, soit la direction du vent retournee par la meteo + 180 degres. Les marqueurs de projection affichent un libelle temporel, par exemple `+1h`, `+2h`, `+3h` ou `+4h` avec l'horizon par defaut. La vitesse de progression est estimee avec une heuristique interne a partir de la vitesse du vent. Aucun parametre manuel n'est demande.
 
 PyroVeille cree jusqu'a 4 entites carte :
 

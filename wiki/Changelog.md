@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Ajout de l'option `Activer les projections automatiques`.
+- Remplacement du pictogramme fleche des marqueurs de projection par un libelle temporel comme `+1h`.
+- Ajout de l'attribut `projection_label` sur les entites de projection.
+
 ## 0.3.0
 
 - Passage en stable des projections automatiques basees sur la meteo locale.
