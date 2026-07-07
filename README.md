@@ -48,6 +48,7 @@ Champs principaux :
 - `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie.
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
 - `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible, avec un libelle temporel comme `+1h`.
+- `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS en beta, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
 
 ## Apercu
 
@@ -101,6 +102,21 @@ PyroVeille recupere automatiquement le vent courant autour de l'incendie via Ope
 - rafales a 10 m.
 
 La direction utilisee est la direction sous le vent. Les marqueurs de projection affichent le delai estime depuis le depart du feu, par exemple `+1h`, `+2h`, `+3h` ou `+4h` avec l'horizon par defaut. La vitesse de progression reste une heuristique interne derivee du vent, pas une prevision officielle. Aucun parametre manuel n'est demande a l'utilisateur.
+
+## Beta : zones satellite FIRMS
+
+La version `0.4.0-beta.1` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS.
+
+Options a configurer :
+
+- `Activer les zones satellite FIRMS`: active la recuperation des hotspots satellite.
+- `NASA FIRMS MAP_KEY`: cle gratuite a demander sur le site NASA FIRMS.
+- `Source satellite FIRMS`: source de donnees, par defaut `VIIRS S-NPP NRT`.
+- `Rayon de recherche FIRMS`: rayon autour de chaque incendie pour chercher les hotspots, par defaut `25 km`.
+
+Quand des hotspots sont disponibles, PyroVeille cree des entites `device_tracker.pyroveille_hotspot_*` visibles sur la carte et ajoute un attribut `satellite_zone` sur le marqueur de l'incendie.
+
+Important : cette zone est une estimation issue de detections satellite. Elle ne represente pas un contour officiel du feu ni une zone d'intervention.
 
 ## Automatisation mobile
 

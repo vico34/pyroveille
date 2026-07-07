@@ -21,6 +21,10 @@ from .const import (
     CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
     CONF_ENABLE_PROJECTIONS,
+    CONF_ENABLE_SATELLITE_ZONES,
+    CONF_FIRMS_MAP_KEY,
+    CONF_FIRMS_SEARCH_RADIUS_KM,
+    CONF_FIRMS_SOURCE,
     CONF_GEOCODE_MISSING_COORDINATES,
     CONF_INCLUDE_LINK_IN_NOTIFICATIONS,
     CONF_NOTIFICATION_MAX_DISTANCE_KM,
@@ -34,6 +38,10 @@ from .const import (
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
     DEFAULT_ENABLE_PROJECTIONS,
+    DEFAULT_ENABLE_SATELLITE_ZONES,
+    DEFAULT_FIRMS_DAY_RANGE,
+    DEFAULT_FIRMS_SEARCH_RADIUS_KM,
+    DEFAULT_FIRMS_SOURCE,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
     DEFAULT_INCLUDE_LINK_IN_NOTIFICATIONS,
     DEFAULT_MAX_ITEMS,
@@ -45,7 +53,7 @@ from .const import (
     DOMAIN,
     EVENT_NEARBY_FIRE,
 )
-from .models import FireAlert, FireProjection, LocalWeather
+from .models import FireAlert, FireHotspot, FireProjection, LocalWeather
 from .util import distance_km, parse_departments
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,6 +108,22 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         self.enable_projections = bool(
             options.get(CONF_ENABLE_PROJECTIONS, data.get(CONF_ENABLE_PROJECTIONS, DEFAULT_ENABLE_PROJECTIONS))
         )
+        self.enable_satellite_zones = bool(
+            options.get(
+                CONF_ENABLE_SATELLITE_ZONES,
+                data.get(CONF_ENABLE_SATELLITE_ZONES, DEFAULT_ENABLE_SATELLITE_ZONES),
+            )
+        )
+        self.firms_map_key = str(options.get(CONF_FIRMS_MAP_KEY, data.get(CONF_FIRMS_MAP_KEY, ""))).strip()
+        self.firms_source = str(
+            options.get(CONF_FIRMS_SOURCE, data.get(CONF_FIRMS_SOURCE, DEFAULT_FIRMS_SOURCE))
+        ).strip()
+        self.firms_search_radius_km = float(
+            options.get(
+                CONF_FIRMS_SEARCH_RADIUS_KM,
+                data.get(CONF_FIRMS_SEARCH_RADIUS_KM, DEFAULT_FIRMS_SEARCH_RADIUS_KM),
+            )
+        )
         self.auto_projection_horizon_hours = DEFAULT_AUTO_PROJECTION_HORIZON_HOURS
         self.auto_projection_uncertainty_km = DEFAULT_AUTO_PROJECTION_UNCERTAINTY_KM
         self.auto_projection_wind_factor = DEFAULT_AUTO_PROJECTION_WIND_FACTOR
@@ -107,6 +131,7 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         self.last_successful_update: datetime | None = None
         self.last_error: str | None = None
         self.local_weather: dict[str, LocalWeather] = {}
+        self.fire_hotspots: dict[str, list[FireHotspot]] = {}
         self.client = FeuxDeForetClient(
             hass,
             options.get(CONF_API_BASE_URL, data.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL)),
@@ -169,7 +194,10 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         nearby = [self._with_distance(alert) for alert in alerts]
         nearby = [alert for alert in nearby if self._is_in_scope(alert)]
         nearby.sort(key=lambda alert: alert.distance_km if alert.distance_km is not None else 999999)
-        await self._async_update_local_weather(nearby)
+        await asyncio.gather(
+            self._async_update_local_weather(nearby),
+            self._async_update_fire_hotspots(nearby),
+        )
 
         self.last_successful_update = dt_util.utcnow()
         self.last_error = None
@@ -300,3 +328,55 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             if weather is not None
         }
         self.local_weather = weather_by_id
+
+    async def _async_update_fire_hotspots(self, alerts: list[FireAlert]) -> None:
+        """Fetch satellite hotspots around nearby alerts."""
+        if not self.enable_satellite_zones or not self.firms_map_key:
+            self.fire_hotspots = {}
+            return
+        located_alerts = [alert for alert in alerts if alert.has_location]
+        hotspot_results = await asyncio.gather(
+            *[
+                self.client.async_get_fire_hotspots(
+                    alert,
+                    map_key=self.firms_map_key,
+                    source=self.firms_source,
+                    radius_km=self.firms_search_radius_km,
+                    day_range=DEFAULT_FIRMS_DAY_RANGE,
+                )
+                for alert in located_alerts
+            ]
+        )
+        self.fire_hotspots = {
+            alert.id: hotspots
+            for alert, hotspots in zip(located_alerts, hotspot_results, strict=False)
+            if hotspots
+        }
+
+    def satellite_zone_for_alert(self, alert_id: str) -> dict[str, object] | None:
+        """Return estimated satellite zone details for an alert."""
+        hotspots = self.fire_hotspots.get(alert_id) or []
+        if not hotspots:
+            return None
+        latitudes = [hotspot.latitude for hotspot in hotspots]
+        longitudes = [hotspot.longitude for hotspot in hotspots]
+        center_latitude = sum(latitudes) / len(latitudes)
+        center_longitude = sum(longitudes) / len(longitudes)
+        estimated_radius = max(
+            distance_km(center_latitude, center_longitude, hotspot.latitude, hotspot.longitude)
+            for hotspot in hotspots
+        )
+        return {
+            "source": "nasa-firms",
+            "mode": "satellite_hotspots",
+            "hotspot_count": len(hotspots),
+            "center_latitude": round(center_latitude, 6),
+            "center_longitude": round(center_longitude, 6),
+            "estimated_radius_km": round(max(estimated_radius, 0.5), 2),
+            "bbox": {
+                "south": round(min(latitudes), 6),
+                "west": round(min(longitudes), 6),
+                "north": round(max(latitudes), 6),
+                "east": round(max(longitudes), 6),
+            },
+        }

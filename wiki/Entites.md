@@ -26,6 +26,14 @@ device_tracker.pyroveille_fire_<id>_projection_100
 
 Ces points representent 25%, 50%, 75% et 100% de l'horizon interne de projection. Leur marqueur affiche un libelle temporel, par exemple `+1h`, `+2h`, `+3h` ou `+4h` avec l'horizon par defaut.
 
+Depuis `0.4.0-beta.1`, PyroVeille peut aussi creer des entites beta de hotspots satellite NASA FIRMS :
+
+```text
+device_tracker.pyroveille_hotspot_<id>
+```
+
+Ces points representent des detections satellite proches d'un incendie. Ils aident a visualiser une zone active estimee, mais ne sont pas un contour officiel.
+
 ## Exemple de carte Lovelace
 
 Apres une premiere detection, Home Assistant cree une entite `device_tracker` par incendie proche. La carte native `map` de Home Assistant utilise OpenStreetMap. Ajoutez les entites PyroVeille dans cette carte :
@@ -71,6 +79,7 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 - rouge : feu actif ;
 - gris : feu inactif ou termine ;
 - orange : point de projection automatique, avec libelle temporel de progression.
+- orange fonce : hotspot satellite FIRMS beta.
 
 ## Captures
 
@@ -84,5 +93,6 @@ Chaque entite `device_tracker` contient aussi :
 - `marker_color`: couleur HTML du marqueur.
 - `bearing`: direction estimee de projection en degres pour les marqueurs de projection ;
 - `projection_label`: libelle temporel affiche sur les marqueurs de projection.
+- `satellite_zone`: zone satellite estimee pour les marqueurs d'incendie, si FIRMS est active et si des hotspots sont disponibles.
 
 Si votre tableau de bord n'affiche pas l'image du marqueur, supprimez puis rajoutez la carte apres la premiere detection, ou ajoutez explicitement les nouvelles entites `device_tracker` PyroVeille dans la liste `entities`.

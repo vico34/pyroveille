@@ -14,12 +14,13 @@ from homeassistant.util import slugify
 from .const import DOMAIN
 from .coordinator import FeuxDeForetDataCoordinator
 from .entity import FeuxDeForetEntity
-from .models import FireAlert, FireProjection
+from .models import FireAlert, FireHotspot, FireProjection
 from .util import destination_point
 
 _ACTIVE_FIRE_COLOR = "#e53935"
 _INACTIVE_FIRE_COLOR = "#757575"
 _PROJECTION_COLOR = "#fb8c00"
+_HOTSPOT_COLOR = "#d84315"
 _PROJECTION_STEPS = (0.25, 0.5, 0.75, 1.0)
 
 
@@ -66,6 +67,7 @@ class FireTrackerPlatform:
         self._async_add_entities = async_add_entities
         self._known_ids: set[str] = set()
         self._known_projection_ids: set[tuple[str, float]] = set()
+        self._known_hotspot_ids: set[str] = set()
 
     def async_update_entities(self) -> None:
         """Add trackers for newly discovered nearby fires."""
@@ -75,14 +77,19 @@ class FireTrackerPlatform:
                 self._known_ids.add(alert.id)
                 new_entities.append(FireTrackerEntity(self._coordinator, alert.id))
 
-            if not alert.has_location or self._coordinator.projection_for_alert(alert) is None:
-                continue
-            for step in _PROJECTION_STEPS:
-                projection_id = (alert.id, step)
-                if projection_id in self._known_projection_ids:
+            if alert.has_location and self._coordinator.projection_for_alert(alert) is not None:
+                for step in _PROJECTION_STEPS:
+                    projection_id = (alert.id, step)
+                    if projection_id in self._known_projection_ids:
+                        continue
+                    self._known_projection_ids.add(projection_id)
+                    new_entities.append(FireProjectionTrackerEntity(self._coordinator, alert.id, step))
+
+            for hotspot in self._coordinator.fire_hotspots.get(alert.id, []):
+                if hotspot.hotspot_id in self._known_hotspot_ids:
                     continue
-                self._known_projection_ids.add(projection_id)
-                new_entities.append(FireProjectionTrackerEntity(self._coordinator, alert.id, step))
+                self._known_hotspot_ids.add(hotspot.hotspot_id)
+                new_entities.append(FireHotspotTrackerEntity(self._coordinator, hotspot.hotspot_id))
         if new_entities:
             self._async_add_entities(new_entities)
 
@@ -137,6 +144,7 @@ class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):
             **alert.as_dict(),
             "fire_status": "active" if alert.active else "inactive",
             "marker_color": _ACTIVE_FIRE_COLOR if alert.active else _INACTIVE_FIRE_COLOR,
+            "satellite_zone": self.coordinator.satellite_zone_for_alert(alert.id),
         }
 
     @property
@@ -261,3 +269,81 @@ class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
             return None
         distance = projection.distance_km * self._step
         return destination_point(alert.latitude, alert.longitude, projection.bearing, distance)
+
+
+class FireHotspotTrackerEntity(FeuxDeForetEntity, TrackerEntity):
+    """Represent one NASA FIRMS hotspot as a GPS tracker."""
+
+    _attr_icon = "mdi:fire-alert"
+    _attr_source_type = SourceType.GPS
+
+    def __init__(self, coordinator: FeuxDeForetDataCoordinator, hotspot_id: str) -> None:
+        """Initialize hotspot tracker."""
+        super().__init__(coordinator)
+        self._hotspot_id = hotspot_id
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_hotspot_{hotspot_id}"
+        self._attr_suggested_object_id = f"pyroveille_hotspot_{slugify(hotspot_id)}"
+
+    @property
+    def _hotspot(self) -> FireHotspot | None:
+        for hotspots in self.coordinator.fire_hotspots.values():
+            if hotspot := next((item for item in hotspots if item.hotspot_id == self._hotspot_id), None):
+                return hotspot
+        return None
+
+    @property
+    def available(self) -> bool:
+        """Return whether the hotspot is still present."""
+        return self._hotspot is not None
+
+    @property
+    def name(self) -> str:
+        """Return hotspot tracker name."""
+        hotspot = self._hotspot
+        if hotspot is None:
+            return f"Hotspot satellite {self._hotspot_id}"
+        return f"Hotspot satellite {hotspot.fire_id}"
+
+    @property
+    def latitude(self) -> float | None:
+        """Return hotspot latitude."""
+        hotspot = self._hotspot
+        return hotspot.latitude if hotspot else None
+
+    @property
+    def longitude(self) -> float | None:
+        """Return hotspot longitude."""
+        hotspot = self._hotspot
+        return hotspot.longitude if hotspot else None
+
+    @property
+    def location_accuracy(self) -> int:
+        """Return hotspot accuracy in meters."""
+        hotspot = self._hotspot
+        if hotspot and hotspot.scan:
+            return max(375, int(hotspot.scan * 1000))
+        return 1000
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        """Return hotspot details."""
+        hotspot = self._hotspot
+        if hotspot is None:
+            return {"id": self._hotspot_id, "satellite_hotspot": False}
+        return {
+            **hotspot.as_dict(),
+            "satellite_hotspot": True,
+            "marker_color": _HOTSPOT_COLOR,
+        }
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return a satellite hotspot marker for map cards."""
+        if not self.available:
+            return None
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="22" fill="{_HOTSPOT_COLOR}" opacity="0.9"/>
+<circle cx="32" cy="32" r="8" fill="#fff3e0"/>
+<circle cx="32" cy="32" r="30" fill="none" stroke="{_HOTSPOT_COLOR}" stroke-width="4" opacity="0.55"/>
+</svg>"""
+        return f"data:image/svg+xml;utf8,{quote(svg)}"

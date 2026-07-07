@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import re
+import csv
 from datetime import datetime
+from io import StringIO
 from typing import Any
 from urllib.parse import urljoin
 
@@ -13,14 +15,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_FEUXDEFORET_BASE_URL, DEFAULT_MAX_ITEMS
-from .models import FireAlert, LocalWeather
+from .models import FireAlert, FireHotspot, LocalWeather
+from .util import distance_km
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-PyroVeille/0.3.2"
+USER_AGENT = "HomeAssistant-PyroVeille/0.4.0-beta.1"
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+FIRMS_AREA_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 
 
 class FeuxDeForetApiError(Exception):
@@ -164,6 +168,62 @@ class FeuxDeForetClient:
             wind_direction=self._float(current.get("wind_direction_10m")),
             wind_gusts_kmh=self._float(current.get("wind_gusts_10m")),
         )
+
+    async def async_get_fire_hotspots(
+        self,
+        alert: FireAlert,
+        *,
+        map_key: str,
+        source: str,
+        radius_km: float,
+        day_range: int,
+    ) -> list[FireHotspot]:
+        """Fetch NASA FIRMS hotspots near an alert."""
+        if not alert.has_location or not map_key or radius_km <= 0:
+            return []
+        west, south, east, north = _bbox_around(alert.latitude, alert.longitude, radius_km)
+        area = f"{west:.5f},{south:.5f},{east:.5f},{north:.5f}"
+        url = f"{FIRMS_AREA_URL}/{map_key}/{source}/{area}/{max(1, min(day_range, 5))}"
+        headers = {"Accept": "text/csv", "User-Agent": USER_AGENT}
+        try:
+            async with self._session.get(url, headers=headers, timeout=20) as response:
+                if response.status >= 400:
+                    _LOGGER.debug("FIRMS returned HTTP %s for %s", response.status, alert.id)
+                    return []
+                text = await response.text()
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.debug("Could not fetch FIRMS hotspots for %s: %s", alert.id, err)
+            return []
+
+        hotspots: list[FireHotspot] = []
+        reader = csv.DictReader(StringIO(text))
+        for index, row in enumerate(reader):
+            latitude = self._float(row.get("latitude"))
+            longitude = self._float(row.get("longitude"))
+            if latitude is None or longitude is None:
+                continue
+            distance = distance_km(alert.latitude, alert.longitude, latitude, longitude)
+            if distance > radius_km:
+                continue
+            hotspots.append(
+                FireHotspot(
+                    fire_id=alert.id,
+                    hotspot_id=f"{alert.id}_{index}",
+                    latitude=latitude,
+                    longitude=longitude,
+                    distance_km=distance,
+                    confidence=self._string(row.get("confidence")),
+                    brightness=self._float(row.get("bright_ti4") or row.get("brightness")),
+                    scan=self._float(row.get("scan")),
+                    track=self._float(row.get("track")),
+                    acquisition_date=self._string(row.get("acq_date")),
+                    acquisition_time=self._string(row.get("acq_time")),
+                    satellite=self._string(row.get("satellite")),
+                    instrument=self._string(row.get("instrument")),
+                )
+            )
+        hotspots.sort(key=lambda hotspot: hotspot.distance_km)
+        return hotspots
 
     @staticmethod
     def _string(value: Any) -> str | None:
@@ -315,3 +375,17 @@ def _geocode_queries(query: str) -> list[str]:
         queries.append(f"{postcode} {city}")
         queries.append(city)
     return list(dict.fromkeys(queries))
+
+
+def _bbox_around(latitude: float, longitude: float, radius_km: float) -> tuple[float, float, float, float]:
+    """Return west, south, east, north bbox around a point."""
+    from math import cos, radians
+
+    lat_delta = radius_km / 111.32
+    lon_scale = max(0.01, cos(radians(latitude)))
+    lon_delta = radius_km / (111.32 * lon_scale)
+    west = max(-180.0, longitude - lon_delta)
+    east = min(180.0, longitude + lon_delta)
+    south = max(-90.0, latitude - lat_delta)
+    north = min(90.0, latitude + lat_delta)
+    return west, south, east, north

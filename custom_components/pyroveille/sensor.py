@@ -110,4 +110,9 @@ class LastSuccessfulUpdateSensor(FeuxDeForetEntity, SensorEntity):
                 if self.coordinator.projection_for_alert(alert) is not None
                 for step in (25, 50, 75, 100)
             ],
+            "hotspot_entities": [
+                f"device_tracker.pyroveille_hotspot_{slugify(hotspot.hotspot_id)}"
+                for hotspots in self.coordinator.fire_hotspots.values()
+                for hotspot in hotspots
+            ],
         }

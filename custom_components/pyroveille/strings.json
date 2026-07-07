@@ -17,6 +17,10 @@
           "telegram_notify_service": "Service ou entite Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
           "enable_projections": "Activer les projections automatiques",
+          "enable_satellite_zones": "Activer les zones satellite FIRMS",
+          "firms_map_key": "NASA FIRMS MAP_KEY",
+          "firms_source": "Source satellite FIRMS",
+          "firms_search_radius_km": "Rayon de recherche FIRMS",
           "api_base_url": "URL API feuxdeforet.fr"
         }
       }
@@ -49,6 +53,10 @@
           "telegram_notify_service": "Service ou entite Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
           "enable_projections": "Activer les projections automatiques",
+          "enable_satellite_zones": "Activer les zones satellite FIRMS",
+          "firms_map_key": "NASA FIRMS MAP_KEY",
+          "firms_source": "Source satellite FIRMS",
+          "firms_search_radius_km": "Rayon de recherche FIRMS",
           "api_base_url": "URL API feuxdeforet.fr"
         }
       }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.1
+
+- Ajout beta des zones satellite estimees via NASA FIRMS.
+- Ajout des options `Activer les zones satellite FIRMS`, `NASA FIRMS MAP_KEY`, `Source satellite FIRMS` et `Rayon de recherche FIRMS`.
+- Ajout des entites `device_tracker.pyroveille_hotspot_*` pour afficher les hotspots satellite sur la carte.
+- Ajout de l'attribut `satellite_zone` sur les marqueurs d'incendie.
+
 ## 0.3.2
 
 - Correction de l'envoi Telegram avec les entites `notify.*` modernes via `notify.send_message`.

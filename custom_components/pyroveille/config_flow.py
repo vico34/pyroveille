@@ -20,6 +20,10 @@ from .const import (
     CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
     CONF_ENABLE_PROJECTIONS,
+    CONF_ENABLE_SATELLITE_ZONES,
+    CONF_FIRMS_MAP_KEY,
+    CONF_FIRMS_SEARCH_RADIUS_KM,
+    CONF_FIRMS_SOURCE,
     CONF_GEOCODE_MISSING_COORDINATES,
     CONF_INCLUDE_LINK_IN_NOTIFICATIONS,
     CONF_NOTIFICATION_MAX_DISTANCE_KM,
@@ -31,6 +35,9 @@ from .const import (
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
     DEFAULT_ENABLE_PROJECTIONS,
+    DEFAULT_ENABLE_SATELLITE_ZONES,
+    DEFAULT_FIRMS_SEARCH_RADIUS_KM,
+    DEFAULT_FIRMS_SOURCE,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
     DEFAULT_INCLUDE_LINK_IN_NOTIFICATIONS,
     DEFAULT_NAME,
@@ -248,6 +255,48 @@ def _schema(defaults: dict[str, Any], *, include_center: bool = True) -> vol.Sch
             default=defaults.get(CONF_ENABLE_PROJECTIONS, DEFAULT_ENABLE_PROJECTIONS),
         )
     ] = bool
+    fields[
+        vol.Required(
+            CONF_ENABLE_SATELLITE_ZONES,
+            default=defaults.get(CONF_ENABLE_SATELLITE_ZONES, DEFAULT_ENABLE_SATELLITE_ZONES),
+        )
+    ] = bool
+    fields[
+        vol.Optional(
+            CONF_FIRMS_MAP_KEY,
+            default=defaults.get(CONF_FIRMS_MAP_KEY, ""),
+        )
+    ] = selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT))
+    fields[
+        vol.Required(
+            CONF_FIRMS_SOURCE,
+            default=defaults.get(CONF_FIRMS_SOURCE, DEFAULT_FIRMS_SOURCE),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value="VIIRS_SNPP_NRT", label="VIIRS S-NPP NRT"),
+                selector.SelectOptionDict(value="VIIRS_NOAA20_NRT", label="VIIRS NOAA-20 NRT"),
+                selector.SelectOptionDict(value="VIIRS_NOAA21_NRT", label="VIIRS NOAA-21 NRT"),
+                selector.SelectOptionDict(value="MODIS_NRT", label="MODIS NRT"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+    fields[
+        vol.Required(
+            CONF_FIRMS_SEARCH_RADIUS_KM,
+            default=defaults.get(CONF_FIRMS_SEARCH_RADIUS_KM, DEFAULT_FIRMS_SEARCH_RADIUS_KM),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=1,
+            max=100,
+            step=1,
+            unit_of_measurement="km",
+            mode=selector.NumberSelectorMode.SLIDER,
+        )
+    )
     fields[vol.Required(CONF_API_BASE_URL, default=defaults.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL))] = str
     return vol.Schema(fields)
 

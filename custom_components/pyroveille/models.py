@@ -122,3 +122,42 @@ class LocalWeather:
             "downwind_bearing": self.downwind_bearing,
             "source": self.source,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class FireHotspot:
+    """Satellite active fire detection near a reported fire."""
+
+    fire_id: str
+    hotspot_id: str
+    latitude: float
+    longitude: float
+    distance_km: float
+    confidence: str | None = None
+    brightness: float | None = None
+    scan: float | None = None
+    track: float | None = None
+    acquisition_date: str | None = None
+    acquisition_time: str | None = None
+    satellite: str | None = None
+    instrument: str | None = None
+    source: str = "nasa-firms"
+
+    def as_dict(self) -> dict[str, object | None]:
+        """Return serializable attributes."""
+        return {
+            "fire_id": self.fire_id,
+            "hotspot_id": self.hotspot_id,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "distance_km": self.distance_km,
+            "confidence": self.confidence,
+            "brightness": self.brightness,
+            "scan": self.scan,
+            "track": self.track,
+            "acquisition_date": self.acquisition_date,
+            "acquisition_time": self.acquisition_time,
+            "satellite": self.satellite,
+            "instrument": self.instrument,
+            "source": self.source,
+        }

@@ -24,6 +24,10 @@ L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les co
 - `Service ou entite Telegram notify`: service legacy, par exemple `telegram` pour `notify.telegram`, ou entite moderne, par exemple `notify.telegram_bot_chat`.
 - `Geocoder les communes sans coordonnees natives`: place approximativement les signalements sur la carte quand la source ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
+- `Activer les zones satellite FIRMS`: active la recuperation beta de hotspots satellite NASA FIRMS autour des incendies.
+- `NASA FIRMS MAP_KEY`: cle gratuite necessaire pour appeler les services FIRMS.
+- `Source satellite FIRMS`: source de donnees satellite, par defaut `VIIRS S-NPP NRT`.
+- `Rayon de recherche FIRMS`: rayon autour de chaque incendie utilise pour chercher les hotspots.
 
 ## Configuration Telegram
 
@@ -59,3 +63,11 @@ Si la cible Telegram n'est pas disponible, PyroVeille ignore l'envoi Telegram, n
 Depuis `0.3.1`, les projections peuvent etre activees ou desactivees dans les options de l'integration. Quand elles sont activees, PyroVeille recupere automatiquement la meteo locale Open-Meteo pour chaque incendie proche, puis cree des points de projection sur la carte si le vent local est disponible. Quand elles sont desactivees, PyroVeille ne recupere pas la meteo locale et ne cree pas de points de projection.
 
 Voir [Projections](Projections) pour le fonctionnement et les limites.
+
+## Zones satellite FIRMS beta
+
+Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
+
+Les hotspots sont exposes comme des entites `device_tracker.pyroveille_hotspot_*`. Le marqueur de l'incendie expose aussi un attribut `satellite_zone` avec le nombre de hotspots, un centre estime, une bbox et un rayon estime.
+
+Cette information reste une estimation satellite, pas un perimetre officiel du feu.
