@@ -15,7 +15,7 @@ Des entites `device_tracker` GPS sont creees pour les incendies proches disposan
 
 Si la source ne fournit pas de coordonnees, PyroVeille peut geocoder la commune pour obtenir une position approximative.
 
-En beta `0.3.0-beta.2`, PyroVeille cree aussi des entites de projection automatique quand la meteo locale est disponible pour l'incendie. Les entites suivent ce format :
+Depuis `0.3.0`, PyroVeille cree aussi des entites de projection automatique quand la meteo locale est disponible pour l'incendie. Les entites suivent ce format :
 
 ```text
 device_tracker.pyroveille_fire_<id>_projection_25
@@ -70,7 +70,13 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 
 - rouge : feu actif ;
 - gris : feu inactif ou termine ;
-- orange : point de projection beta.
+- orange : point de projection automatique.
+
+## Captures
+
+![Capteurs PyroVeille](images/pyroveille-info.png)
+
+![Carte des incendies PyroVeille](images/pyroveille-map-card.png)
 
 Chaque entite `device_tracker` contient aussi :
 

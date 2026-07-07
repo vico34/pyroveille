@@ -1,6 +1,6 @@
-# Projections beta automatiques
+# Projections automatiques
 
-La projection de trajectoire automatique est disponible a partir de `0.3.0-beta.2`.
+La projection de trajectoire automatique est disponible a partir de `0.3.0`.
 
 Important : PyroVeille ne calcule pas une prevision officielle de propagation. La source `feuxdeforet.fr` ne fournit pas de front de feu ni de trajectoire temporelle exploitable. La projection est donc une aide visuelle automatique basee sur la meteo locale, principalement le vent.
 
@@ -24,6 +24,10 @@ device_tracker.pyroveille_fire_<id>_projection_100
 ```
 
 La carte automatique `auto-entities` documentee dans la page [Entites](Entites) les affiche automatiquement car elles commencent par `device_tracker.pyroveille_`.
+
+## Apercu
+
+![Carte des projections PyroVeille](images/pyroveille-projection-map-card.png)
 
 ## Limites
 

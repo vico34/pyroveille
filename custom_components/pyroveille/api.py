@@ -17,7 +17,7 @@ from .models import FireAlert, LocalWeather
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-PyroVeille/0.3.0-beta.2"
+USER_AGENT = "HomeAssistant-PyroVeille/0.3.0"
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"

@@ -12,7 +12,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 - Notification Telegram optionnelle via un service `notify.telegram` existant dans Home Assistant.
 - Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
-- Projection beta automatique de trajectoire basee sur le vent local Open-Meteo.
+- Projection automatique de trajectoire basee sur le vent local Open-Meteo.
 - Geocodage optionnel des communes lorsque la route publique ne fournit pas de coordonnees.
 
 ## Installation HACS
@@ -46,7 +46,15 @@ Champs principaux :
 - `sensor.distance_incendie_le_plus_proche`: distance en km du signalement le plus proche.
 - `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie.
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
-- `device_tracker.pyroveille_fire_*_projection_*`: marqueurs beta de projection automatique de trajectoire quand la meteo locale est disponible.
+- `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible.
+
+## Apercu
+
+![Capteurs PyroVeille](images/pyroveille-info.png)
+
+![Carte des incendies PyroVeille](images/pyroveille-map-card.png)
+
+![Carte des projections PyroVeille](images/pyroveille-projection-map-card.png)
 
 ## Exemple de carte
 
@@ -81,9 +89,9 @@ filter:
 show_empty: false
 ```
 
-## Projection beta de trajectoire
+## Projection automatique de trajectoire
 
-La version `0.3.0-beta.2` genere automatiquement une projection pour chaque incendie proche disposant de coordonnees et d'une meteo locale disponible.
+La version `0.3.0` genere automatiquement une projection pour chaque incendie proche disposant de coordonnees et d'une meteo locale disponible.
 
 PyroVeille recupere automatiquement le vent courant autour de l'incendie via Open-Meteo :
 

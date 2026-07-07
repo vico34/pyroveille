@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Passage en stable des projections automatiques basees sur la meteo locale.
+- Ajout des captures d'ecran dans le README et le wiki.
+- Conservation d'un fonctionnement sans parametre manuel pour les projections.
+
 ## 0.3.0-beta.2
 
 - Remplacement des projections manuelles par des projections automatiques sans saisie utilisateur.
