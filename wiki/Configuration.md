@@ -68,6 +68,18 @@ Voir [Projections](Projections) pour le fonctionnement et les limites.
 
 Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
 
+### Generer la cle NASA FIRMS
+
+1. Ouvrez la page officielle NASA FIRMS : [demander une MAP_KEY FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/).
+2. Renseignez votre adresse email dans le formulaire `Get MAP_KEY`.
+3. Validez la demande.
+4. Copiez la cle recue par email.
+5. Dans les options PyroVeille, collez cette valeur dans `NASA FIRMS MAP_KEY`.
+6. Activez `Activer les zones satellite FIRMS`.
+7. Gardez `VIIRS S-NPP NRT` pour un premier test et `25 km` comme rayon de recherche.
+
+La page NASA permet aussi de verifier le nombre de transactions restantes. La limite indiquee par NASA est de 5000 transactions par intervalle de 10 minutes, ce qui est largement suffisant pour un usage Home Assistant normal.
+
 Les hotspots sont exposes comme des entites `device_tracker.pyroveille_hotspot_*`. Le marqueur de l'incendie expose aussi un attribut `satellite_zone` avec le nombre de hotspots, un centre estime, une bbox et un rayon estime.
 
 Cette information reste une estimation satellite, pas un perimetre officiel du feu.
