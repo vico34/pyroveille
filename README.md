@@ -2,6 +2,14 @@
 
 Integration Home Assistant custom compatible HACS pour surveiller les signalements d'incendies publies par [feuxdeforet.fr](https://feuxdeforet.fr/).
 
+## Soutenir le projet
+
+Si PyroVeille vous est utile, vous pouvez soutenir le projet via Buy Me a Coffee :
+
+[https://buymeacoffee.com/vicar](https://buymeacoffee.com/vicar)
+
+![QR code Buy Me a Coffee PyroVeille](images/buymeacoffee-qr.png)
+
 ## Fonctionnalites
 
 - Recuperation des signalements recents via la route publique `https://feuxdeforet.fr/api/signalements/recent`.
