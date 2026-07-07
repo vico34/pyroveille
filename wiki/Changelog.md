@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.3
+
+- Ajout d'un polygone `satellite_zone.geojson` pour representer une zone satellite estimee difforme.
+- Ajout de `area_km2` sur les zones satellite estimees.
+- Ajout de la carte custom `pyroveille-map-card` basee sur OpenStreetMap/Leaflet.
+
 ## 0.4.0-beta.2
 
 - Ajout des entites `device_tracker.pyroveille_fire_*_satellite_zone`.

@@ -106,7 +106,7 @@ La direction utilisee est la direction sous le vent. Les marqueurs de projection
 
 ## Beta : zones satellite FIRMS
 
-La version `0.4.0-beta.2` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS.
+La version `0.4.0-beta.3` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS, avec une carte custom capable d'afficher une zone difforme transparente.
 
 Options a configurer :
 
@@ -119,9 +119,30 @@ Quand des hotspots sont disponibles, PyroVeille cree :
 
 - des entites `device_tracker.pyroveille_hotspot_*` pour afficher les detections satellite ;
 - une entite `device_tracker.pyroveille_fire_*_satellite_zone` par incendie, centree sur les hotspots et avec `location_accuracy` egal au rayon estime ;
-- un attribut `satellite_zone` sur le marqueur principal de l'incendie.
+- un attribut `satellite_zone` sur le marqueur principal de l'incendie, avec un objet `geojson` de type `Polygon`.
 
 Sur la carte native Home Assistant, l'entite `device_tracker.pyroveille_fire_*_satellite_zone` permet d'afficher un cercle GPS correspondant a la zone estimee. Pour voir cette zone, ajoutez aussi ces entites dans votre carte ou utilisez le filtre automatique `device_tracker.pyroveille_*`.
+
+Pour afficher une seule zone difforme, ajoutez la carte custom PyroVeille dans `Parametres > Tableaux de bord > Ressources` :
+
+```text
+/pyroveille_static/pyroveille-map-card.js
+```
+
+Type de ressource : `Module JavaScript`.
+
+Exemple de carte Lovelace :
+
+```yaml
+type: custom:pyroveille-map-card
+title: Incendies PyroVeille
+height: 520px
+show_satellite_zones: true
+show_hotspots: true
+show_projections: true
+```
+
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`.
 
 Important : cette zone est une estimation issue de detections satellite. Elle ne represente pas un contour officiel du feu ni une zone d'intervention.
 

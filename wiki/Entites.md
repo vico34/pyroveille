@@ -42,6 +42,8 @@ device_tracker.pyroveille_fire_<id>_satellite_zone
 
 Cette entite est centree sur les hotspots detectes et utilise `location_accuracy` pour exposer le rayon estime en metres. Sur la carte native Home Assistant, elle peut donc apparaitre comme un cercle GPS autour de la zone estimee.
 
+Depuis `0.4.0-beta.3`, l'attribut `satellite_zone` contient aussi un objet `geojson` de type `Polygon`. Ce polygone est une enveloppe estimee autour des hotspots FIRMS et permet a la carte custom PyroVeille d'afficher une zone difforme transparente.
+
 ## Exemple de carte Lovelace
 
 Apres une premiere detection, Home Assistant cree une entite `device_tracker` par incendie proche. La carte native `map` de Home Assistant utilise OpenStreetMap. Ajoutez les entites PyroVeille dans cette carte :
@@ -80,6 +82,29 @@ show_empty: false
 Les nouvelles entites PyroVeille sont creees avec un identifiant suggere commencant par `device_tracker.pyroveille_`, ce qui permet a ce filtre de les afficher automatiquement.
 Supprimez le bloc `exclude` si vous voulez afficher aussi les feux inactifs.
 
+## Carte custom PyroVeille
+
+Pour afficher les zones satellite sous forme de polygone difforme, ajoutez la ressource Lovelace suivante dans `Parametres > Tableaux de bord > Ressources` :
+
+```text
+/pyroveille_static/pyroveille-map-card.js
+```
+
+Type de ressource : `Module JavaScript`.
+
+Puis ajoutez une carte manuelle :
+
+```yaml
+type: custom:pyroveille-map-card
+title: Incendies PyroVeille
+height: 520px
+show_satellite_zones: true
+show_hotspots: true
+show_projections: true
+```
+
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`.
+
 ## Couleur des marqueurs
 
 PyroVeille expose une image de marqueur differente selon le statut du feu :
@@ -89,6 +114,7 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 - orange : point de projection automatique, avec libelle temporel de progression.
 - orange fonce : hotspot satellite FIRMS beta.
 - cercle orange transparent : zone satellite estimee FIRMS beta, si la carte affiche le cercle de precision GPS.
+- polygone orange transparent : zone satellite estimee FIRMS beta dans la carte custom PyroVeille.
 
 ## Captures
 
@@ -104,5 +130,6 @@ Chaque entite `device_tracker` contient aussi :
 - `projection_label`: libelle temporel affiche sur les marqueurs de projection.
 - `satellite_zone`: zone satellite estimee pour les marqueurs d'incendie, si FIRMS est active et si des hotspots sont disponibles.
 - `estimated_radius_m`: rayon estime en metres sur les entites `device_tracker.pyroveille_fire_*_satellite_zone`.
+- `geojson`: polygone estime de la zone satellite dans l'attribut `satellite_zone`.
 
 Si votre tableau de bord n'affiche pas l'image du marqueur, supprimez puis rajoutez la carte apres la premiere detection, ou ajoutez explicitement les nouvelles entites `device_tracker` PyroVeille dans la liste `entities`.

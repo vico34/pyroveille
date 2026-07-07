@@ -66,7 +66,7 @@ Voir [Projections](Projections) pour le fonctionnement et les limites.
 
 ## Zones satellite FIRMS beta
 
-Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Depuis `0.4.0-beta.2`, PyroVeille cree aussi une entite de zone satellite estimee affichable sur la carte native Home Assistant. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
+Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Depuis `0.4.0-beta.2`, PyroVeille cree aussi une entite de zone satellite estimee affichable sur la carte native Home Assistant. Depuis `0.4.0-beta.3`, PyroVeille expose un polygone GeoJSON et une carte custom pour afficher une zone difforme transparente. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
 
 ### Generer la cle NASA FIRMS
 
@@ -80,6 +80,29 @@ Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIR
 
 La page NASA permet aussi de verifier le nombre de transactions restantes. La limite indiquee par NASA est de 5000 transactions par intervalle de 10 minutes, ce qui est largement suffisant pour un usage Home Assistant normal.
 
-Les hotspots sont exposes comme des entites `device_tracker.pyroveille_hotspot_*`. PyroVeille cree aussi une entite `device_tracker.pyroveille_fire_*_satellite_zone` par incendie quand des hotspots sont disponibles. Cette entite utilise `location_accuracy` comme rayon estime en metres, ce qui permet a la carte native Home Assistant d'afficher un cercle GPS. Le marqueur de l'incendie expose aussi un attribut `satellite_zone` avec le nombre de hotspots, un centre estime, une bbox et un rayon estime.
+Les hotspots sont exposes comme des entites `device_tracker.pyroveille_hotspot_*`. PyroVeille cree aussi une entite `device_tracker.pyroveille_fire_*_satellite_zone` par incendie quand des hotspots sont disponibles. Cette entite utilise `location_accuracy` comme rayon estime en metres, ce qui permet a la carte native Home Assistant d'afficher un cercle GPS. Le marqueur de l'incendie expose aussi un attribut `satellite_zone` avec le nombre de hotspots, un centre estime, une bbox, un rayon estime, une surface estimee et un `geojson`.
+
+### Carte custom PyroVeille
+
+Pour afficher une seule zone difforme transparente, ajoutez cette ressource Lovelace :
+
+```text
+/pyroveille_static/pyroveille-map-card.js
+```
+
+Type : `Module JavaScript`.
+
+Exemple de carte :
+
+```yaml
+type: custom:pyroveille-map-card
+title: Incendies PyroVeille
+height: 520px
+show_satellite_zones: true
+show_hotspots: true
+show_projections: true
+```
+
+La carte lit automatiquement les entites `device_tracker.pyroveille_*` et dessine les polygones `satellite_zone.geojson` quand ils sont disponibles.
 
 Cette information reste une estimation satellite, pas un perimetre officiel du feu.

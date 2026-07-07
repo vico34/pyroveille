@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import asyncio
 from datetime import datetime
+from math import atan2, cos, degrees, radians, sin
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
@@ -54,7 +55,7 @@ from .const import (
     EVENT_NEARBY_FIRE,
 )
 from .models import FireAlert, FireHotspot, FireProjection, LocalWeather
-from .util import distance_km, parse_departments
+from .util import destination_point, distance_km, parse_departments
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -366,6 +367,7 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             distance_km(center_latitude, center_longitude, hotspot.latitude, hotspot.longitude)
             for hotspot in hotspots
         )
+        polygon = _satellite_zone_polygon(center_latitude, center_longitude, hotspots)
         return {
             "source": "nasa-firms",
             "mode": "satellite_hotspots",
@@ -373,6 +375,23 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             "center_latitude": round(center_latitude, 6),
             "center_longitude": round(center_longitude, 6),
             "estimated_radius_km": round(max(estimated_radius, 0.5), 2),
+            "area_km2": _polygon_area_km2(polygon),
+            "geojson": {
+                "type": "Feature",
+                "properties": {
+                    "source": "nasa-firms",
+                    "mode": "estimated_satellite_zone",
+                    "fire_id": alert_id,
+                    "hotspot_count": len(hotspots),
+                },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [round(longitude, 6), round(latitude, 6)]
+                        for latitude, longitude in polygon
+                    ]],
+                },
+            },
             "bbox": {
                 "south": round(min(latitudes), 6),
                 "west": round(min(longitudes), 6),
@@ -380,3 +399,97 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 "east": round(max(longitudes), 6),
             },
         }
+
+
+def _satellite_zone_polygon(
+    center_latitude: float,
+    center_longitude: float,
+    hotspots: list[FireHotspot],
+) -> list[tuple[float, float]]:
+    """Build a lightweight irregular polygon around satellite hotspots."""
+    if len(hotspots) == 1:
+        radius_km = _hotspot_radius_km(hotspots[0])
+        return [
+            destination_point(center_latitude, center_longitude, bearing, radius_km)
+            for bearing in range(0, 361, 30)
+        ]
+
+    points = sorted(
+        hotspots,
+        key=lambda hotspot: _bearing_degrees(
+            center_latitude,
+            center_longitude,
+            hotspot.latitude,
+            hotspot.longitude,
+        ),
+    )
+    polygon = []
+    for hotspot in points:
+        bearing = _bearing_degrees(center_latitude, center_longitude, hotspot.latitude, hotspot.longitude)
+        distance = distance_km(center_latitude, center_longitude, hotspot.latitude, hotspot.longitude)
+        radius = _hotspot_radius_km(hotspot)
+        polygon.append(destination_point(center_latitude, center_longitude, bearing, distance + radius))
+
+    if len(polygon) == 2:
+        return _capsule_polygon(center_latitude, center_longitude, points)
+
+    polygon.append(polygon[0])
+    return polygon
+
+
+def _capsule_polygon(
+    center_latitude: float,
+    center_longitude: float,
+    hotspots: list[FireHotspot],
+) -> list[tuple[float, float]]:
+    """Build a capsule-shaped polygon when only two hotspots are available."""
+    first, second = hotspots
+    first_bearing = _bearing_degrees(first.latitude, first.longitude, second.latitude, second.longitude)
+    second_bearing = (first_bearing + 180) % 360
+    radius = max(_hotspot_radius_km(first), _hotspot_radius_km(second))
+    points = [
+        destination_point(first.latitude, first.longitude, (first_bearing - 90) % 360, radius),
+        destination_point(second.latitude, second.longitude, (first_bearing - 90) % 360, radius),
+        destination_point(second.latitude, second.longitude, (second_bearing - 90) % 360, radius),
+        destination_point(first.latitude, first.longitude, (second_bearing - 90) % 360, radius),
+    ]
+    points.sort(
+        key=lambda point: _bearing_degrees(center_latitude, center_longitude, point[0], point[1])
+    )
+    points.append(points[0])
+    return points
+
+
+def _hotspot_radius_km(hotspot: FireHotspot) -> float:
+    """Return an estimated footprint radius for a hotspot."""
+    footprint = max(hotspot.scan or 0.0, hotspot.track or 0.0, 0.5)
+    return max(0.5, footprint / 2)
+
+
+def _bearing_degrees(latitude: float, longitude: float, to_latitude: float, to_longitude: float) -> float:
+    """Return initial bearing in degrees."""
+    lat1 = radians(latitude)
+    lat2 = radians(to_latitude)
+    delta_lon = radians(to_longitude - longitude)
+    y = sin(delta_lon) * cos(lat2)
+    x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(delta_lon)
+    return (degrees(atan2(y, x)) + 360) % 360
+
+
+def _polygon_area_km2(polygon: list[tuple[float, float]]) -> float:
+    """Return approximate polygon area using a local equirectangular projection."""
+    if len(polygon) < 4:
+        return 0.0
+    origin_latitude = sum(point[0] for point in polygon[:-1]) / (len(polygon) - 1)
+    projected = [
+        (
+            point[1] * 111.320 * cos(radians(origin_latitude)),
+            point[0] * 110.574,
+        )
+        for point in polygon
+    ]
+    area = 0.0
+    for index, point in enumerate(projected[:-1]):
+        next_point = projected[index + 1]
+        area += point[0] * next_point[1] - next_point[0] * point[1]
+    return round(abs(area) / 2, 2)

@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import FeuxDeForetDataCoordinator
 
+STATIC_URL = "/pyroveille_static"
+STATIC_PATH = Path(__file__).parent / "www"
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PyroVeille from a config entry."""
+    await _async_register_static_path(hass)
     coordinator = FeuxDeForetDataCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
 
@@ -31,3 +38,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry after option updates."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def _async_register_static_path(hass: HomeAssistant) -> None:
+    """Expose PyroVeille frontend assets."""
+    registered = hass.data.setdefault(DOMAIN, {}).setdefault("_static_registered", False)
+    if registered:
+        return
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(STATIC_URL, str(STATIC_PATH), True)]
+    )
+    hass.data[DOMAIN]["_static_registered"] = True
