@@ -46,6 +46,6 @@ async def _async_register_static_path(hass: HomeAssistant) -> None:
     if registered:
         return
     await hass.http.async_register_static_paths(
-        [StaticPathConfig(STATIC_URL, str(STATIC_PATH), True)]
+        [StaticPathConfig(STATIC_URL, str(STATIC_PATH), False)]
     )
     hass.data[DOMAIN]["_static_registered"] = True

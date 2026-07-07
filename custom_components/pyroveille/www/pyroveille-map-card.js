@@ -1,5 +1,5 @@
-const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+const LEAFLET_JS = "/pyroveille_static/leaflet.js";
+const LEAFLET_CSS = "/pyroveille_static/leaflet.css";
 
 class PyroVeilleMapCard extends HTMLElement {
   setConfig(config) {
@@ -12,8 +12,11 @@ class PyroVeilleMapCard extends HTMLElement {
       show_satellite_zones: true,
       ...config,
     };
-    this.attachShadow({ mode: "open" });
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+    }
     this.shadowRoot.innerHTML = `
+      <link rel="stylesheet" href="${LEAFLET_CSS}">
       <style>
         :host { display: block; }
         ha-card { overflow: hidden; }
@@ -36,6 +39,8 @@ class PyroVeilleMapCard extends HTMLElement {
           height: 180px;
           color: var(--secondary-text-color);
           font-size: 14px;
+          padding: 16px;
+          text-align: center;
         }
         .marker {
           width: 32px;
@@ -74,11 +79,15 @@ class PyroVeilleMapCard extends HTMLElement {
       </ha-card>
     `;
     this.mapElement = this.shadowRoot.querySelector(".map");
+    this.map = undefined;
+    this.layers = undefined;
   }
 
   set hass(hass) {
     this._hass = hass;
-    this._ensureLeaflet().then(() => this._renderMap());
+    this._ensureLeaflet()
+      .then(() => this._renderMap())
+      .catch((error) => this._showError(error));
   }
 
   getCardSize() {
@@ -89,23 +98,20 @@ class PyroVeilleMapCard extends HTMLElement {
     if (window.L) {
       return;
     }
-    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = LEAFLET_CSS;
-      document.head.appendChild(link);
-    }
     if (!window.pyroVeilleLeafletPromise) {
       window.pyroVeilleLeafletPromise = new Promise((resolve, reject) => {
         const script = document.createElement("script");
         script.src = LEAFLET_JS;
         script.async = true;
         script.onload = resolve;
-        script.onerror = reject;
+        script.onerror = () => reject(new Error(`Impossible de charger ${LEAFLET_JS}`));
         document.head.appendChild(script);
       });
     }
     await window.pyroVeilleLeafletPromise;
+    if (!window.L) {
+      throw new Error("Leaflet n'est pas disponible apres chargement.");
+    }
   }
 
   _renderMap() {
@@ -122,8 +128,10 @@ class PyroVeilleMapCard extends HTMLElement {
         attribution: "&copy; OpenStreetMap",
       }).addTo(this.map);
       this.layers = window.L.layerGroup().addTo(this.map);
+      setTimeout(() => this.map.invalidateSize(), 0);
     }
 
+    this.mapElement.querySelector(".empty")?.remove();
     this.layers.clearLayers();
     const bounds = [];
     const entities = Object.entries(this._hass.states)
@@ -151,7 +159,26 @@ class PyroVeilleMapCard extends HTMLElement {
 
     if (bounds.length) {
       this.map.fitBounds(bounds, { padding: [24, 24], maxZoom: this.config.default_zoom || 12 });
+    } else {
+      this._showEmpty();
     }
+  }
+
+  _showEmpty() {
+    if (!this.mapElement || this.mapElement.querySelector(".empty")) {
+      return;
+    }
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Aucune entite PyroVeille avec coordonnees n'est disponible pour le moment.";
+    this.mapElement.appendChild(empty);
+  }
+
+  _showError(error) {
+    if (!this.mapElement) {
+      return;
+    }
+    this.mapElement.innerHTML = `<div class="empty">Carte PyroVeille indisponible : ${error.message}</div>`;
   }
 
   _isFire(entityId) {
@@ -228,11 +255,15 @@ class PyroVeilleMapCard extends HTMLElement {
   }
 }
 
-customElements.define("pyroveille-map-card", PyroVeilleMapCard);
+if (!customElements.get("pyroveille-map-card")) {
+  customElements.define("pyroveille-map-card", PyroVeilleMapCard);
+}
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "pyroveille-map-card",
-  name: "PyroVeille Map Card",
-  description: "Carte PyroVeille avec incendies, projections, hotspots et zones satellite FIRMS.",
-});
+if (!window.customCards.some((card) => card.type === "pyroveille-map-card")) {
+  window.customCards.push({
+    type: "pyroveille-map-card",
+    name: "PyroVeille Map Card",
+    description: "Carte PyroVeille avec incendies, projections, hotspots et zones satellite FIRMS.",
+  });
+}

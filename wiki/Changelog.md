@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.4
+
+- Embarquement local de Leaflet et de ses assets pour fiabiliser le chargement de `pyroveille-map-card`.
+- Chargement de la CSS Leaflet dans le Shadow DOM de la carte.
+- Desactivation du cache long sur les assets statiques PyroVeille pendant la beta.
+
 ## 0.4.0-beta.3
 
 - Ajout d'un polygone `satellite_zone.geojson` pour representer une zone satellite estimee difforme.
