@@ -50,3 +50,41 @@ class FireAlert:
             "distance_km": self.distance_km,
             "source": self.source,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class FireProjection:
+    """User-defined fire progression projection."""
+
+    fire_id: str
+    bearing: float
+    speed_kmh: float
+    horizon_hours: float
+    uncertainty_km: float = 0.0
+
+    @property
+    def distance_km(self) -> float:
+        """Return projected distance at horizon."""
+        return self.speed_kmh * self.horizon_hours
+
+    def as_dict(self) -> dict[str, object]:
+        """Return serializable attributes."""
+        return {
+            "fire_id": self.fire_id,
+            "bearing": self.bearing,
+            "speed_kmh": self.speed_kmh,
+            "horizon_hours": self.horizon_hours,
+            "uncertainty_km": self.uncertainty_km,
+            "distance_km": self.distance_km,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, object]) -> "FireProjection":
+        """Create a projection from stored data."""
+        return cls(
+            fire_id=str(data["fire_id"]),
+            bearing=float(data["bearing"]) % 360,
+            speed_kmh=max(0.0, float(data["speed_kmh"])),
+            horizon_hours=max(0.0, float(data["horizon_hours"])),
+            uncertainty_km=max(0.0, float(data.get("uncertainty_km", 0.0))),
+        )

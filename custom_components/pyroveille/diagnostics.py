@@ -22,6 +22,9 @@ async def async_get_config_entry_diagnostics(
         },
         "nearby_alert_count": len(coordinator.nearby_alerts),
         "nearby_alerts": [alert.as_dict() for alert in coordinator.nearby_alerts],
+        "projections": {
+            fire_id: projection.as_dict() for fire_id, projection in coordinator.projections.items()
+        },
         "last_successful_update": coordinator.last_successful_update.isoformat()
         if coordinator.last_successful_update
         else None,

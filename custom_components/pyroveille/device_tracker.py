@@ -14,9 +14,13 @@ from homeassistant.util import slugify
 from .const import DOMAIN
 from .coordinator import FeuxDeForetDataCoordinator
 from .entity import FeuxDeForetEntity
+from .models import FireAlert, FireProjection
+from .util import destination_point
 
 _ACTIVE_FIRE_COLOR = "#e53935"
 _INACTIVE_FIRE_COLOR = "#757575"
+_PROJECTION_COLOR = "#fb8c00"
+_PROJECTION_STEPS = (0.25, 0.5, 0.75, 1.0)
 
 
 async def async_setup_entry(
@@ -43,15 +47,24 @@ class FireTrackerPlatform:
         self._coordinator = coordinator
         self._async_add_entities = async_add_entities
         self._known_ids: set[str] = set()
+        self._known_projection_ids: set[tuple[str, float]] = set()
 
     def async_update_entities(self) -> None:
         """Add trackers for newly discovered nearby fires."""
         new_entities = []
         for alert in self._coordinator.nearby_alerts:
-            if not alert.has_location or alert.id in self._known_ids:
+            if alert.has_location and alert.id not in self._known_ids:
+                self._known_ids.add(alert.id)
+                new_entities.append(FireTrackerEntity(self._coordinator, alert.id))
+
+            if not alert.has_location or alert.id not in self._coordinator.projections:
                 continue
-            self._known_ids.add(alert.id)
-            new_entities.append(FireTrackerEntity(self._coordinator, alert.id))
+            for step in _PROJECTION_STEPS:
+                projection_id = (alert.id, step)
+                if projection_id in self._known_projection_ids:
+                    continue
+                self._known_projection_ids.add(projection_id)
+                new_entities.append(FireProjectionTrackerEntity(self._coordinator, alert.id, step))
         if new_entities:
             self._async_add_entities(new_entities)
 
@@ -121,3 +134,100 @@ class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):
 <path fill="{color}" d="M32 29l8 18h-5v10h-6V47h-5l8-18z"/>
 </svg>"""
         return f"data:image/svg+xml;utf8,{quote(svg)}"
+
+
+class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
+    """Represent one projected fire progression point as a GPS tracker."""
+
+    _attr_icon = "mdi:arrow-up-bold"
+    _attr_source_type = SourceType.GPS
+
+    def __init__(self, coordinator: FeuxDeForetDataCoordinator, alert_id: str, step: float) -> None:
+        """Initialize projection tracker."""
+        super().__init__(coordinator)
+        self._alert_id = alert_id
+        self._step = step
+        step_label = int(step * 100)
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_fire_{alert_id}_projection_{step_label}"
+        self._attr_suggested_object_id = f"pyroveille_fire_{slugify(alert_id)}_projection_{step_label}"
+
+    @property
+    def _alert(self) -> FireAlert | None:
+        return next((alert for alert in self.coordinator.nearby_alerts if alert.id == self._alert_id), None)
+
+    @property
+    def _projection(self) -> FireProjection | None:
+        return self.coordinator.projections.get(self._alert_id)
+
+    @property
+    def available(self) -> bool:
+        """Return whether the projection point can be displayed."""
+        alert = self._alert
+        projection = self._projection
+        return bool(alert and alert.has_location and projection and projection.horizon_hours > 0)
+
+    @property
+    def name(self) -> str:
+        """Return projection tracker name."""
+        alert = self._alert
+        step_label = int(self._step * 100)
+        title = alert.title if alert else f"Incendie {self._alert_id}"
+        return f"{title} projection {step_label}%"
+
+    @property
+    def latitude(self) -> float | None:
+        """Return projected latitude."""
+        point = self._projected_point()
+        return point[0] if point else None
+
+    @property
+    def longitude(self) -> float | None:
+        """Return projected longitude."""
+        point = self._projected_point()
+        return point[1] if point else None
+
+    @property
+    def location_accuracy(self) -> int:
+        """Return projection accuracy in meters."""
+        projection = self._projection
+        if projection is None:
+            return 1000
+        return max(1000, int(projection.uncertainty_km * 1000))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        """Return projection details."""
+        projection = self._projection
+        if projection is None:
+            return {"id": self._alert_id, "projection": False}
+        elapsed_hours = projection.horizon_hours * self._step
+        projected_distance = projection.speed_kmh * elapsed_hours
+        return {
+            **projection.as_dict(),
+            "id": self._alert_id,
+            "projection": True,
+            "projection_step": self._step,
+            "projection_elapsed_hours": round(elapsed_hours, 2),
+            "projection_distance_km": round(projected_distance, 2),
+            "marker_color": _PROJECTION_COLOR,
+        }
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return a projection marker for map cards."""
+        if not self.available:
+            return None
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="30" fill="{_PROJECTION_COLOR}"/>
+<path fill="#ffffff" d="M32 9l18 32H38v14H26V41H14L32 9z"/>
+</svg>"""
+        return f"data:image/svg+xml;utf8,{quote(svg)}"
+
+    def _projected_point(self) -> tuple[float, float] | None:
+        """Return projected coordinates for this step."""
+        alert = self._alert
+        projection = self._projection
+        if not alert or not alert.has_location or projection is None:
+            return None
+        distance = projection.distance_km * self._step
+        return destination_point(alert.latitude, alert.longitude, projection.bearing, distance)

@@ -47,3 +47,13 @@ telegram_maison
 ```
 
 Si le service Telegram n'est pas disponible, PyroVeille ignore l'envoi Telegram et continue les notifications persistantes Home Assistant.
+
+## Projections beta
+
+Les projections ne se configurent pas dans le formulaire principal. Elles se definissent avec les services Home Assistant :
+
+- `pyroveille.set_fire_projection`
+- `pyroveille.clear_fire_projection`
+- `pyroveille.clear_all_projections`
+
+Voir [Projections](Projections) pour les exemples complets.

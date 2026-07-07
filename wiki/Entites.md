@@ -7,13 +7,24 @@ PyroVeille cree les entites suivantes.
 - `binary_sensor.alerte_incendie_proche`: actif si au moins un incendie est dans la zone.
 - `sensor.incendies_proches`: nombre d'incendies dans le perimetre.
 - `sensor.distance_incendie_le_plus_proche`: distance du signalement le plus proche.
-- `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie, avec `last_error` et la liste des entites carte en attributs.
+- `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie, avec `last_error`, la liste des entites carte et les entites de projection en attributs.
 
 ## Carte
 
 Des entites `device_tracker` GPS sont creees pour les incendies proches disposant de coordonnees. Elles exposent `latitude`, `longitude` et `source_type = gps`, ce qui les rend visibles dans la carte native Home Assistant.
 
 Si la source ne fournit pas de coordonnees, PyroVeille peut geocoder la commune pour obtenir une position approximative.
+
+En beta `0.3.0-beta.1`, PyroVeille peut aussi creer des entites de projection quand une trajectoire utilisateur est definie avec le service `pyroveille.set_fire_projection`. Les entites suivent ce format :
+
+```text
+device_tracker.pyroveille_fire_<id>_projection_25
+device_tracker.pyroveille_fire_<id>_projection_50
+device_tracker.pyroveille_fire_<id>_projection_75
+device_tracker.pyroveille_fire_<id>_projection_100
+```
+
+Ces points representent 25%, 50%, 75% et 100% de l'horizon configure.
 
 ## Exemple de carte Lovelace
 
@@ -58,7 +69,8 @@ Supprimez le bloc `exclude` si vous voulez afficher aussi les feux inactifs.
 PyroVeille expose une image de marqueur differente selon le statut du feu :
 
 - rouge : feu actif ;
-- gris : feu inactif ou termine.
+- gris : feu inactif ou termine ;
+- orange : point de projection beta.
 
 Chaque entite `device_tracker` contient aussi :
 

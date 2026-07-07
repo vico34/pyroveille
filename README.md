@@ -12,6 +12,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 - Notification Telegram optionnelle via un service `notify.telegram` existant dans Home Assistant.
 - Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
+- Projection beta de trajectoire utilisateur avec vitesse, direction et points visuels sur la carte.
 - Geocodage optionnel des communes lorsque la route publique ne fournit pas de coordonnees.
 
 ## Installation HACS
@@ -45,6 +46,7 @@ Champs principaux :
 - `sensor.distance_incendie_le_plus_proche`: distance en km du signalement le plus proche.
 - `sensor.derniere_mise_a_jour_pyroveille`: date de la derniere recuperation reussie.
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
+- `device_tracker.pyroveille_fire_*_projection_*`: marqueurs beta de projection de trajectoire, si une projection est definie.
 
 ## Exemple de carte
 
@@ -77,6 +79,35 @@ filter:
     - attributes:
         fire_status: inactive
 show_empty: false
+```
+
+## Projection beta de trajectoire
+
+La version `0.3.0-beta.1` permet de definir manuellement une trajectoire estimee pour un incendie. PyroVeille ne predit pas le feu depuis la source : la direction et la vitesse sont saisies par l'utilisateur, puis l'integration affiche 4 points de progression sur la carte native Home Assistant.
+
+Exemple depuis `Outils de developpement > Services` :
+
+```yaml
+service: pyroveille.set_fire_projection
+data:
+  fire_id: "12345"
+  bearing: 90
+  speed_kmh: 1.2
+  horizon_hours: 4
+  uncertainty_km: 1
+```
+
+- `bearing`: direction en degres, `0` nord, `90` est, `180` sud, `270` ouest.
+- `speed_kmh`: vitesse estimee en km/h.
+- `horizon_hours`: horizon affiche sur la carte.
+- `uncertainty_km`: incertitude approximative, exposee comme precision GPS du marqueur.
+
+Pour supprimer une projection :
+
+```yaml
+service: pyroveille.clear_fire_projection
+data:
+  fire_id: "12345"
 ```
 
 ## Automatisation mobile

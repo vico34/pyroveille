@@ -1,0 +1,70 @@
+set_fire_projection:
+  name: Definir la projection d'un incendie
+  description: Definit une trajectoire utilisateur pour afficher la progression estimee d'un incendie sur la carte.
+  fields:
+    fire_id:
+      name: Identifiant incendie
+      description: Identifiant PyroVeille de l'incendie, visible dans les attributs du device_tracker.
+      required: true
+      selector:
+        text:
+    bearing:
+      name: Direction
+      description: Direction de progression en degres. 0 nord, 90 est, 180 sud, 270 ouest.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 359
+          step: 1
+          mode: slider
+          unit_of_measurement: deg
+    speed_kmh:
+      name: Vitesse
+      description: Vitesse de progression estimee en kilometres par heure.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 20
+          step: 0.1
+          mode: box
+          unit_of_measurement: km/h
+    horizon_hours:
+      name: Horizon
+      description: Nombre d'heures a projeter sur la carte.
+      required: true
+      selector:
+        number:
+          min: 0.1
+          max: 72
+          step: 0.5
+          mode: box
+          unit_of_measurement: h
+    uncertainty_km:
+      name: Incertitude
+      description: Rayon d'incertitude approximatif en kilometres, expose comme precision GPS du marqueur.
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 50
+          step: 0.5
+          mode: box
+          unit_of_measurement: km
+
+clear_fire_projection:
+  name: Effacer la projection d'un incendie
+  description: Supprime la trajectoire utilisateur d'un incendie.
+  fields:
+    fire_id:
+      name: Identifiant incendie
+      description: Identifiant PyroVeille de l'incendie.
+      required: true
+      selector:
+        text:
+
+clear_all_projections:
+  name: Effacer toutes les projections
+  description: Supprime toutes les trajectoires utilisateur PyroVeille.

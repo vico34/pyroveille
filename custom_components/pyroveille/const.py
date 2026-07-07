@@ -42,4 +42,8 @@ CONF_API_BASE_URL = "api_base_url"
 
 EVENT_NEARBY_FIRE = f"{DOMAIN}_nearby_fire"
 
+SERVICE_SET_FIRE_PROJECTION = "set_fire_projection"
+SERVICE_CLEAR_FIRE_PROJECTION = "clear_fire_projection"
+SERVICE_CLEAR_ALL_PROJECTIONS = "clear_all_projections"
+
 PLATFORMS = ["binary_sensor", "sensor", "device_tracker"]

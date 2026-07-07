@@ -104,4 +104,10 @@ class LastSuccessfulUpdateSensor(FeuxDeForetEntity, SensorEntity):
             "tracked_entities": [
                 f"device_tracker.pyroveille_fire_{slugify(alert.id)}" for alert in self.coordinator.nearby_alerts
             ],
+            "projection_entities": [
+                f"device_tracker.pyroveille_fire_{slugify(alert.id)}_projection_{step}"
+                for alert in self.coordinator.nearby_alerts
+                if alert.id in self.coordinator.projections
+                for step in (25, 50, 75, 100)
+            ],
         }

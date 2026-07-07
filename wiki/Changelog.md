@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0-beta.1
+
+- Ajout beta des projections utilisateur de trajectoire incendie.
+- Ajout des services `pyroveille.set_fire_projection`, `pyroveille.clear_fire_projection` et `pyroveille.clear_all_projections`.
+- Ajout de marqueurs carte `device_tracker.pyroveille_fire_*_projection_*` pour visualiser la progression estimee.
+- Persistance des projections dans le stockage Home Assistant.
+- Documentation de la limite importante : projection utilisateur, pas prevision officielle.
+
 ## 0.2.4
 
 - Ajout d'identifiants suggeres `device_tracker.pyroveille_*` pour les entites carte.

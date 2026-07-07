@@ -8,8 +8,9 @@ from datetime import datetime
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import FeuxDeForetApiError, FeuxDeForetClient
 from .const import (
@@ -39,7 +40,7 @@ from .const import (
     DOMAIN,
     EVENT_NEARBY_FIRE,
 )
-from .models import FireAlert
+from .models import FireAlert, FireProjection
 from .util import distance_km, parse_departments
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,6 +94,12 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         self._seen_nearby_ids: set[str] = set()
         self.last_successful_update: datetime | None = None
         self.last_error: str | None = None
+        self.projections: dict[str, FireProjection] = {}
+        self._projection_store: Store[dict[str, dict[str, object]]] = Store(
+            hass,
+            1,
+            f"{DOMAIN}_{entry.entry_id}_projections",
+        )
         self.client = FeuxDeForetClient(
             hass,
             options.get(CONF_API_BASE_URL, data.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL)),
@@ -115,6 +122,59 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
     def nearby_alerts(self) -> list[FireAlert]:
         """Return latest nearby alerts."""
         return self.data or []
+
+    async def async_load_projections(self) -> None:
+        """Load persisted user projections."""
+        stored = await self._projection_store.async_load()
+        if not stored:
+            return
+        projections: dict[str, FireProjection] = {}
+        for fire_id, projection_data in stored.items():
+            try:
+                projection = FireProjection.from_dict(projection_data)
+            except (KeyError, TypeError, ValueError):
+                _LOGGER.warning("Ignoring invalid stored projection for %s", fire_id)
+                continue
+            projections[projection.fire_id] = projection
+        self.projections = projections
+
+    async def async_set_projection(
+        self,
+        fire_id: str,
+        bearing: float,
+        speed_kmh: float,
+        horizon_hours: float,
+        uncertainty_km: float,
+    ) -> None:
+        """Create or update a user-defined projection for one fire."""
+        projection = FireProjection(
+            fire_id=fire_id,
+            bearing=bearing % 360,
+            speed_kmh=max(0.0, speed_kmh),
+            horizon_hours=max(0.0, horizon_hours),
+            uncertainty_km=max(0.0, uncertainty_km),
+        )
+        self.projections[fire_id] = projection
+        await self._async_save_projections()
+        self.async_update_listeners()
+
+    async def async_clear_projection(self, fire_id: str) -> None:
+        """Clear a user-defined projection for one fire."""
+        self.projections.pop(fire_id, None)
+        await self._async_save_projections()
+        self.async_update_listeners()
+
+    async def async_clear_all_projections(self) -> None:
+        """Clear all user-defined projections."""
+        self.projections.clear()
+        await self._async_save_projections()
+        self.async_update_listeners()
+
+    async def _async_save_projections(self) -> None:
+        """Persist user projections."""
+        await self._projection_store.async_save(
+            {fire_id: projection.as_dict() for fire_id, projection in self.projections.items()}
+        )
 
     async def _async_update_data(self) -> list[FireAlert]:
         """Fetch and filter recent fires."""

@@ -17,7 +17,7 @@ from .models import FireAlert
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-PyroVeille/0.2.4"
+USER_AGENT = "HomeAssistant-PyroVeille/0.3.0-beta.1"
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
