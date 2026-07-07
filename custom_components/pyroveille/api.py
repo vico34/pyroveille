@@ -13,13 +13,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_FEUXDEFORET_BASE_URL, DEFAULT_MAX_ITEMS
-from .models import FireAlert
+from .models import FireAlert, LocalWeather
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-PyroVeille/0.3.0-beta.1"
+USER_AGENT = "HomeAssistant-PyroVeille/0.3.0-beta.2"
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 
 class FeuxDeForetApiError(Exception):
@@ -125,6 +126,44 @@ class FeuxDeForetClient:
     async def _async_geocode(self, query: str) -> tuple[float, float] | None:
         """Resolve a commune to approximate coordinates."""
         return await _async_geocode_with_session(self._session, query)
+
+    async def async_get_local_weather(self, latitude: float, longitude: float) -> LocalWeather | None:
+        """Fetch current local weather for projection heuristics."""
+        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+        params = {
+            "latitude": str(latitude),
+            "longitude": str(longitude),
+            "current": "wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+            "wind_speed_unit": "kmh",
+            "timezone": "auto",
+        }
+        try:
+            async with self._session.get(
+                OPEN_METEO_FORECAST_URL,
+                headers=headers,
+                params=params,
+                timeout=20,
+            ) as response:
+                if response.status >= 400:
+                    _LOGGER.debug("Open-Meteo returned HTTP %s for %s,%s", response.status, latitude, longitude)
+                    return None
+                data = await response.json(content_type=None)
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.debug("Could not fetch local weather for %s,%s: %s", latitude, longitude, err)
+            return None
+
+        if not isinstance(data, dict):
+            return None
+        current = data.get("current")
+        if not isinstance(current, dict):
+            return None
+        return LocalWeather(
+            latitude=latitude,
+            longitude=longitude,
+            wind_speed_kmh=self._float(current.get("wind_speed_10m")),
+            wind_direction=self._float(current.get("wind_direction_10m")),
+            wind_gusts_kmh=self._float(current.get("wind_gusts_10m")),
+        )
 
     @staticmethod
     def _string(value: Any) -> str | None:

@@ -57,7 +57,7 @@ class FireTrackerPlatform:
                 self._known_ids.add(alert.id)
                 new_entities.append(FireTrackerEntity(self._coordinator, alert.id))
 
-            if not alert.has_location or alert.id not in self._coordinator.projections:
+            if not alert.has_location or self._coordinator.projection_for_alert(alert) is None:
                 continue
             for step in _PROJECTION_STEPS:
                 projection_id = (alert.id, step)
@@ -157,7 +157,10 @@ class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
 
     @property
     def _projection(self) -> FireProjection | None:
-        return self.coordinator.projections.get(self._alert_id)
+        alert = self._alert
+        if alert is None:
+            return None
+        return self.coordinator.projection_for_alert(alert)
 
     @property
     def available(self) -> bool:
@@ -202,6 +205,7 @@ class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
             return {"id": self._alert_id, "projection": False}
         elapsed_hours = projection.horizon_hours * self._step
         projected_distance = projection.speed_kmh * elapsed_hours
+        weather = self.coordinator.local_weather.get(self._alert_id)
         return {
             **projection.as_dict(),
             "id": self._alert_id,
@@ -209,6 +213,7 @@ class FireProjectionTrackerEntity(FeuxDeForetEntity, TrackerEntity):
             "projection_step": self._step,
             "projection_elapsed_hours": round(elapsed_hours, 2),
             "projection_distance_km": round(projected_distance, 2),
+            "local_weather": weather.as_dict() if weather else None,
             "marker_color": _PROJECTION_COLOR,
         }
 

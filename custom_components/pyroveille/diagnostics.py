@@ -22,8 +22,16 @@ async def async_get_config_entry_diagnostics(
         },
         "nearby_alert_count": len(coordinator.nearby_alerts),
         "nearby_alerts": [alert.as_dict() for alert in coordinator.nearby_alerts],
-        "projections": {
-            fire_id: projection.as_dict() for fire_id, projection in coordinator.projections.items()
+        "active_projections": {
+            fire_id: projection.as_dict() for fire_id, projection in coordinator.active_projections.items()
+        },
+        "local_weather": {
+            fire_id: weather.as_dict() for fire_id, weather in coordinator.local_weather.items()
+        },
+        "automatic_projections": {
+            "horizon_hours": coordinator.auto_projection_horizon_hours,
+            "uncertainty_km": coordinator.auto_projection_uncertainty_km,
+            "wind_factor": coordinator.auto_projection_wind_factor,
         },
         "last_successful_update": coordinator.last_successful_update.isoformat()
         if coordinator.last_successful_update

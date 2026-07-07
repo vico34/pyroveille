@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import logging
+import asyncio
 from datetime import datetime
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -27,6 +27,9 @@ from .const import (
     CONF_RADIUS_KM,
     CONF_TELEGRAM_NOTIFY_SERVICE,
     DEFAULT_API_BASE_URL,
+    DEFAULT_AUTO_PROJECTION_HORIZON_HOURS,
+    DEFAULT_AUTO_PROJECTION_UNCERTAINTY_KM,
+    DEFAULT_AUTO_PROJECTION_WIND_FACTOR,
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
     DEFAULT_GEOCODE_MISSING_COORDINATES,
@@ -40,7 +43,7 @@ from .const import (
     DOMAIN,
     EVENT_NEARBY_FIRE,
 )
-from .models import FireAlert, FireProjection
+from .models import FireAlert, FireProjection, LocalWeather
 from .util import distance_km, parse_departments
 
 _LOGGER = logging.getLogger(__name__)
@@ -91,15 +94,13 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 data.get(CONF_TELEGRAM_NOTIFY_SERVICE, DEFAULT_TELEGRAM_NOTIFY_SERVICE),
             )
         ).removeprefix("notify.")
+        self.auto_projection_horizon_hours = DEFAULT_AUTO_PROJECTION_HORIZON_HOURS
+        self.auto_projection_uncertainty_km = DEFAULT_AUTO_PROJECTION_UNCERTAINTY_KM
+        self.auto_projection_wind_factor = DEFAULT_AUTO_PROJECTION_WIND_FACTOR
         self._seen_nearby_ids: set[str] = set()
         self.last_successful_update: datetime | None = None
         self.last_error: str | None = None
-        self.projections: dict[str, FireProjection] = {}
-        self._projection_store: Store[dict[str, dict[str, object]]] = Store(
-            hass,
-            1,
-            f"{DOMAIN}_{entry.entry_id}_projections",
-        )
+        self.local_weather: dict[str, LocalWeather] = {}
         self.client = FeuxDeForetClient(
             hass,
             options.get(CONF_API_BASE_URL, data.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL)),
@@ -123,58 +124,31 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         """Return latest nearby alerts."""
         return self.data or []
 
-    async def async_load_projections(self) -> None:
-        """Load persisted user projections."""
-        stored = await self._projection_store.async_load()
-        if not stored:
-            return
-        projections: dict[str, FireProjection] = {}
-        for fire_id, projection_data in stored.items():
-            try:
-                projection = FireProjection.from_dict(projection_data)
-            except (KeyError, TypeError, ValueError):
-                _LOGGER.warning("Ignoring invalid stored projection for %s", fire_id)
-                continue
-            projections[projection.fire_id] = projection
-        self.projections = projections
-
-    async def async_set_projection(
-        self,
-        fire_id: str,
-        bearing: float,
-        speed_kmh: float,
-        horizon_hours: float,
-        uncertainty_km: float,
-    ) -> None:
-        """Create or update a user-defined projection for one fire."""
-        projection = FireProjection(
-            fire_id=fire_id,
-            bearing=bearing % 360,
-            speed_kmh=max(0.0, speed_kmh),
-            horizon_hours=max(0.0, horizon_hours),
-            uncertainty_km=max(0.0, uncertainty_km),
+    def projection_for_alert(self, alert: FireAlert) -> FireProjection | None:
+        """Return weather-based automatic projection for an alert."""
+        weather = self.local_weather.get(alert.id)
+        if weather is None or weather.downwind_bearing is None or weather.wind_speed_kmh is None:
+            return None
+        speed_kmh = weather.wind_speed_kmh * self.auto_projection_wind_factor
+        if speed_kmh <= 0 or self.auto_projection_horizon_hours <= 0:
+            return None
+        return FireProjection(
+            fire_id=alert.id,
+            bearing=weather.downwind_bearing,
+            speed_kmh=speed_kmh,
+            horizon_hours=max(0.0, self.auto_projection_horizon_hours),
+            uncertainty_km=max(0.0, self.auto_projection_uncertainty_km),
+            mode="weather",
         )
-        self.projections[fire_id] = projection
-        await self._async_save_projections()
-        self.async_update_listeners()
 
-    async def async_clear_projection(self, fire_id: str) -> None:
-        """Clear a user-defined projection for one fire."""
-        self.projections.pop(fire_id, None)
-        await self._async_save_projections()
-        self.async_update_listeners()
-
-    async def async_clear_all_projections(self) -> None:
-        """Clear all user-defined projections."""
-        self.projections.clear()
-        await self._async_save_projections()
-        self.async_update_listeners()
-
-    async def _async_save_projections(self) -> None:
-        """Persist user projections."""
-        await self._projection_store.async_save(
-            {fire_id: projection.as_dict() for fire_id, projection in self.projections.items()}
-        )
+    @property
+    def active_projections(self) -> dict[str, FireProjection]:
+        """Return projections currently applied to nearby alerts."""
+        return {
+            alert.id: projection
+            for alert in self.nearby_alerts
+            if (projection := self.projection_for_alert(alert)) is not None
+        }
 
     async def _async_update_data(self) -> list[FireAlert]:
         """Fetch and filter recent fires."""
@@ -187,6 +161,7 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         nearby = [self._with_distance(alert) for alert in alerts]
         nearby = [alert for alert in nearby if self._is_in_scope(alert)]
         nearby.sort(key=lambda alert: alert.distance_km if alert.distance_km is not None else 999999)
+        await self._async_update_local_weather(nearby)
 
         self.last_successful_update = dt_util.utcnow()
         self.last_error = None
@@ -274,3 +249,19 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         if alert.distance_km is None:
             return False
         return alert.distance_km <= self.notification_max_distance_km
+
+    async def _async_update_local_weather(self, alerts: list[FireAlert]) -> None:
+        """Fetch local weather for nearby alerts with coordinates."""
+        located_alerts = [alert for alert in alerts if alert.has_location]
+        weather_results = await asyncio.gather(
+            *[
+                self.client.async_get_local_weather(alert.latitude, alert.longitude)
+                for alert in located_alerts
+            ]
+        )
+        weather_by_id = {
+            alert.id: weather
+            for alert, weather in zip(located_alerts, weather_results, strict=False)
+            if weather is not None
+        }
+        self.local_weather = weather_by_id

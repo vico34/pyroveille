@@ -1,30 +1,18 @@
-# Projections beta
+# Projections beta automatiques
 
-La projection de trajectoire est disponible a partir de `0.3.0-beta.1`.
+La projection de trajectoire automatique est disponible a partir de `0.3.0-beta.2`.
 
-Important : PyroVeille ne calcule pas une prevision officielle de propagation. La source `feuxdeforet.fr` ne fournit pas de front de feu ni de trajectoire temporelle exploitable. La projection est donc une information utilisateur : vous saisissez la direction et la vitesse estimees, puis PyroVeille affiche des points de progression sur la carte.
+Important : PyroVeille ne calcule pas une prevision officielle de propagation. La source `feuxdeforet.fr` ne fournit pas de front de feu ni de trajectoire temporelle exploitable. La projection est donc une aide visuelle automatique basee sur la meteo locale, principalement le vent.
 
-## Definir une projection
+## Fonctionnement
 
-Dans Home Assistant, ouvrez `Outils de developpement > Services`, puis appelez :
+Pour chaque incendie proche avec coordonnees, PyroVeille interroge automatiquement Open-Meteo autour du point de l'incendie et recupere :
 
-```yaml
-service: pyroveille.set_fire_projection
-data:
-  fire_id: "12345"
-  bearing: 90
-  speed_kmh: 1.2
-  horizon_hours: 4
-  uncertainty_km: 1
-```
+- vitesse du vent a 10 m ;
+- direction du vent a 10 m ;
+- rafales a 10 m.
 
-Champs :
-
-- `fire_id`: identifiant de l'incendie, visible dans les attributs du `device_tracker` PyroVeille.
-- `bearing`: direction en degres. `0` nord, `90` est, `180` sud, `270` ouest.
-- `speed_kmh`: vitesse estimee en kilometres par heure.
-- `horizon_hours`: nombre d'heures a projeter.
-- `uncertainty_km`: incertitude approximative en kilometres.
+La trajectoire utilise la direction sous le vent, soit la direction du vent retournee par la meteo + 180 degres. La vitesse de progression est estimee avec une heuristique interne a partir de la vitesse du vent. Aucun parametre manuel n'est demande.
 
 PyroVeille cree jusqu'a 4 entites carte :
 
@@ -37,22 +25,9 @@ device_tracker.pyroveille_fire_<id>_projection_100
 
 La carte automatique `auto-entities` documentee dans la page [Entites](Entites) les affiche automatiquement car elles commencent par `device_tracker.pyroveille_`.
 
-## Effacer une projection
-
-```yaml
-service: pyroveille.clear_fire_projection
-data:
-  fire_id: "12345"
-```
-
-Pour tout effacer :
-
-```yaml
-service: pyroveille.clear_all_projections
-```
-
 ## Limites
 
-- La projection est purement geometrique : point de depart, direction, vitesse, horizon.
-- Elle ne tient pas compte du vent, du relief, de la vegetation, des actions des secours ou de l'evolution reelle du feu.
+- La projection est une heuristique geometrique : point de depart, vent local, vitesse estimee, horizon.
+- Elle ne tient pas compte du relief, de la vegetation, des actions des secours ou de l'evolution reelle du feu.
+- Le vent meteo est une donnee modele, pas une observation terrain garantie.
 - Elle doit etre utilisee comme aide visuelle personnelle, pas comme source officielle d'alerte ou de decision de securite.

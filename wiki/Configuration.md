@@ -50,10 +50,6 @@ Si le service Telegram n'est pas disponible, PyroVeille ignore l'envoi Telegram 
 
 ## Projections beta
 
-Les projections ne se configurent pas dans le formulaire principal. Elles se definissent avec les services Home Assistant :
+Les projections ne se configurent pas dans le formulaire principal et ne demandent pas de parametre manuel. En beta `0.3.0-beta.2`, PyroVeille recupere automatiquement la meteo locale Open-Meteo pour chaque incendie proche, puis cree des points de projection sur la carte si le vent local est disponible.
 
-- `pyroveille.set_fire_projection`
-- `pyroveille.clear_fire_projection`
-- `pyroveille.clear_all_projections`
-
-Voir [Projections](Projections) pour les exemples complets.
+Voir [Projections](Projections) pour le fonctionnement et les limites.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0-beta.2
+
+- Remplacement des projections manuelles par des projections automatiques sans saisie utilisateur.
+- Recuperation automatique de la meteo locale via Open-Meteo pour chaque incendie proche.
+- Utilisation du vent local pour determiner la direction sous le vent et une vitesse de progression estimee.
+- Suppression des services manuels de projection de la beta.
+
 ## 0.3.0-beta.1
 
 - Ajout beta des projections utilisateur de trajectoire incendie.

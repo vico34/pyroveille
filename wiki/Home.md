@@ -16,4 +16,4 @@ PyroVeille est une integration Home Assistant custom compatible HACS qui surveil
 
 ## Resume
 
-L'integration recupere les signalements recents, filtre les incendies autour d'une adresse et d'un rayon choisis, cree une notification Home Assistant ou Telegram, expose des marqueurs `device_tracker` GPS pour les afficher sur la carte, et permet en beta de definir une projection utilisateur de trajectoire.
+L'integration recupere les signalements recents, filtre les incendies autour d'une adresse et d'un rayon choisis, cree une notification Home Assistant ou Telegram, expose des marqueurs `device_tracker` GPS pour les afficher sur la carte, et genere en beta une projection automatique de trajectoire basee sur la meteo locale.

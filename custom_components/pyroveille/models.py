@@ -54,13 +54,14 @@ class FireAlert:
 
 @dataclass(frozen=True, slots=True)
 class FireProjection:
-    """User-defined fire progression projection."""
+    """Fire progression projection."""
 
     fire_id: str
     bearing: float
     speed_kmh: float
     horizon_hours: float
     uncertainty_km: float = 0.0
+    mode: str = "weather"
 
     @property
     def distance_km(self) -> float:
@@ -76,6 +77,7 @@ class FireProjection:
             "horizon_hours": self.horizon_hours,
             "uncertainty_km": self.uncertainty_km,
             "distance_km": self.distance_km,
+            "mode": self.mode,
         }
 
     @classmethod
@@ -87,4 +89,36 @@ class FireProjection:
             speed_kmh=max(0.0, float(data["speed_kmh"])),
             horizon_hours=max(0.0, float(data["horizon_hours"])),
             uncertainty_km=max(0.0, float(data.get("uncertainty_km", 0.0))),
+            mode=str(data.get("mode", "weather")),
         )
+
+
+@dataclass(frozen=True, slots=True)
+class LocalWeather:
+    """Local weather data used for automatic projections."""
+
+    latitude: float
+    longitude: float
+    wind_speed_kmh: float | None
+    wind_direction: float | None
+    wind_gusts_kmh: float | None
+    source: str = "open-meteo.com"
+
+    @property
+    def downwind_bearing(self) -> float | None:
+        """Return downwind direction from meteorological wind direction."""
+        if self.wind_direction is None:
+            return None
+        return (self.wind_direction + 180) % 360
+
+    def as_dict(self) -> dict[str, object | None]:
+        """Return serializable attributes."""
+        return {
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "wind_speed_kmh": self.wind_speed_kmh,
+            "wind_direction": self.wind_direction,
+            "wind_gusts_kmh": self.wind_gusts_kmh,
+            "downwind_bearing": self.downwind_bearing,
+            "source": self.source,
+        }

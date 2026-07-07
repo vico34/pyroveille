@@ -15,7 +15,7 @@ Des entites `device_tracker` GPS sont creees pour les incendies proches disposan
 
 Si la source ne fournit pas de coordonnees, PyroVeille peut geocoder la commune pour obtenir une position approximative.
 
-En beta `0.3.0-beta.1`, PyroVeille peut aussi creer des entites de projection quand une trajectoire utilisateur est definie avec le service `pyroveille.set_fire_projection`. Les entites suivent ce format :
+En beta `0.3.0-beta.2`, PyroVeille cree aussi des entites de projection automatique quand la meteo locale est disponible pour l'incendie. Les entites suivent ce format :
 
 ```text
 device_tracker.pyroveille_fire_<id>_projection_25
@@ -24,7 +24,7 @@ device_tracker.pyroveille_fire_<id>_projection_75
 device_tracker.pyroveille_fire_<id>_projection_100
 ```
 
-Ces points representent 25%, 50%, 75% et 100% de l'horizon configure.
+Ces points representent 25%, 50%, 75% et 100% de l'horizon interne de projection.
 
 ## Exemple de carte Lovelace
 
