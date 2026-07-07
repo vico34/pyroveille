@@ -7,6 +7,7 @@ class PyroVeilleMapCard extends HTMLElement {
       title: "PyroVeille",
       height: "420px",
       entity_prefix: "device_tracker.pyroveille_",
+      entities: [],
       show_hotspots: true,
       show_projections: true,
       show_satellite_zones: true,
@@ -134,25 +135,28 @@ class PyroVeilleMapCard extends HTMLElement {
     this.mapElement.querySelector(".empty")?.remove();
     this.layers.clearLayers();
     const bounds = [];
-    const entities = Object.entries(this._hass.states)
-      .filter(([entityId]) => entityId.startsWith(this.config.entity_prefix));
+    const entities = this._pyroVeilleEntities();
+    const drawnZones = new Set();
 
     for (const [entityId, state] of entities) {
       const attrs = state.attributes || {};
-      if (this._isSatelliteZone(entityId, attrs)) {
-        this._drawSatelliteZone(attrs, bounds);
+      if (this.config.show_satellite_zones) {
+        this._drawSatelliteZone(attrs, bounds, drawnZones);
+        if (attrs.satellite_zone?.geojson) {
+          this._drawGeoJson(attrs.satellite_zone.geojson, bounds, drawnZones);
+        }
       }
     }
     for (const [entityId, state] of entities) {
       const attrs = state.attributes || {};
-      if (this._isHotspot(entityId) && this.config.show_hotspots) {
+      if (this._isHotspot(entityId, attrs) && this.config.show_hotspots) {
         this._drawMarker(attrs, bounds, "hotspot", "", state);
-      } else if (this._isProjection(entityId) && this.config.show_projections) {
+      } else if (this._isProjection(entityId, attrs) && this.config.show_projections) {
         this._drawMarker(attrs, bounds, "projection", attrs.projection_label || "+", state);
-      } else if (this._isFire(entityId)) {
+      } else if (this._isFire(entityId, attrs)) {
         this._drawMarker(attrs, bounds, attrs.fire_status === "inactive" ? "inactive" : "fire", "F", state);
         if (this.config.show_satellite_zones && attrs.satellite_zone?.geojson) {
-          this._drawGeoJson(attrs.satellite_zone.geojson, bounds);
+          this._drawGeoJson(attrs.satellite_zone.geojson, bounds, drawnZones);
         }
       }
     }
@@ -181,37 +185,66 @@ class PyroVeilleMapCard extends HTMLElement {
     this.mapElement.innerHTML = `<div class="empty">Carte PyroVeille indisponible : ${error.message}</div>`;
   }
 
-  _isFire(entityId) {
-    return entityId.includes("pyroveille_fire_")
-      && !this._isProjection(entityId)
-      && !this._isSatelliteZone(entityId, {});
+  _pyroVeilleEntities() {
+    const explicitEntities = new Set(this.config.entities || []);
+    return Object.entries(this._hass.states)
+      .filter(([entityId, state]) => entityId.startsWith("device_tracker."))
+      .filter(([entityId, state]) => {
+        const attrs = state.attributes || {};
+        return explicitEntities.has(entityId)
+          || entityId.startsWith(this.config.entity_prefix)
+          || this._hasPyroVeilleAttributes(attrs);
+      });
   }
 
-  _isProjection(entityId) {
-    return entityId.includes("_projection_");
+  _hasPyroVeilleAttributes(attrs) {
+    return attrs.fire_status != null
+      || attrs.projection === true
+      || attrs.satellite_hotspot === true
+      || attrs.satellite_zone === true
+      || attrs.satellite_zone?.geojson != null
+      || attrs.geojson != null
+      || attrs.hotspot_id != null
+      || attrs.projection_label != null
+      || attrs.mode === "satellite_hotspots";
   }
 
-  _isHotspot(entityId) {
-    return entityId.includes("pyroveille_hotspot_");
+  _isFire(entityId, attrs = {}) {
+    return (attrs.fire_status != null || entityId.includes("pyroveille_fire_"))
+      && !this._isProjection(entityId, attrs)
+      && !this._isSatelliteZone(entityId, attrs)
+      && !this._isHotspot(entityId, attrs);
+  }
+
+  _isProjection(entityId, attrs = {}) {
+    return entityId.includes("_projection_") || attrs.projection === true || attrs.projection_label != null;
+  }
+
+  _isHotspot(entityId, attrs = {}) {
+    return entityId.includes("pyroveille_hotspot_") || attrs.satellite_hotspot === true || attrs.hotspot_id != null;
   }
 
   _isSatelliteZone(entityId, attrs) {
-    return entityId.endsWith("_satellite_zone") || attrs.satellite_zone === true;
+    return entityId.endsWith("_satellite_zone") || attrs.satellite_zone === true || attrs.mode === "satellite_hotspots";
   }
 
-  _drawSatelliteZone(attrs, bounds) {
-    if (!this.config.show_satellite_zones) {
+  _drawSatelliteZone(attrs, bounds, drawnZones) {
+    if (attrs.geojson) {
+      this._drawGeoJson(attrs.geojson, bounds, drawnZones);
+    }
+    const latitude = this._number(attrs.latitude);
+    const longitude = this._number(attrs.longitude);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      bounds.push([latitude, longitude]);
+    }
+  }
+
+  _drawGeoJson(geojson, bounds, drawnZones) {
+    const key = this._geoJsonKey(geojson);
+    if (drawnZones?.has(key)) {
       return;
     }
-    if (attrs.geojson) {
-      this._drawGeoJson(attrs.geojson, bounds);
-    }
-    if (Number.isFinite(attrs.latitude) && Number.isFinite(attrs.longitude)) {
-      bounds.push([attrs.latitude, attrs.longitude]);
-    }
-  }
-
-  _drawGeoJson(geojson, bounds) {
+    drawnZones?.add(key);
     const layer = window.L.geoJSON(geojson, {
       style: {
         color: "#d84315",
@@ -229,8 +262,8 @@ class PyroVeilleMapCard extends HTMLElement {
   }
 
   _drawMarker(attrs, bounds, markerClass, label, state) {
-    const latitude = attrs.latitude;
-    const longitude = attrs.longitude;
+    const latitude = this._number(attrs.latitude);
+    const longitude = this._number(attrs.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       return;
     }
@@ -243,6 +276,15 @@ class PyroVeilleMapCard extends HTMLElement {
     const marker = window.L.marker([latitude, longitude], { icon }).addTo(this.layers);
     marker.bindPopup(this._popupContent(state));
     bounds.push([latitude, longitude]);
+  }
+
+  _number(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : undefined;
+  }
+
+  _geoJsonKey(geojson) {
+    return JSON.stringify(geojson?.geometry?.coordinates || geojson);
   }
 
   _popupContent(state) {

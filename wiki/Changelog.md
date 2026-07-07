@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.5
+
+- Detection des entites PyroVeille par attributs dans `pyroveille-map-card`, meme si les entites ont ete renommees.
+- Ajout de l'option `entities` pour forcer une liste d'entites dans la carte custom.
+- Deduplication des polygones quand la zone est disponible sur le marqueur d'incendie et sur l'entite `_satellite_zone`.
+
 ## 0.4.0-beta.4
 
 - Embarquement local de Leaflet et de ses assets pour fiabiliser le chargement de `pyroveille-map-card`.

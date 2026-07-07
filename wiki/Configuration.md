@@ -66,7 +66,7 @@ Voir [Projections](Projections) pour le fonctionnement et les limites.
 
 ## Zones satellite FIRMS beta
 
-Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Depuis `0.4.0-beta.2`, PyroVeille cree aussi une entite de zone satellite estimee affichable sur la carte native Home Assistant. Depuis `0.4.0-beta.3`, PyroVeille expose un polygone GeoJSON et une carte custom pour afficher une zone difforme transparente. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les problemes de chargement CDN. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
+Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Depuis `0.4.0-beta.2`, PyroVeille cree aussi une entite de zone satellite estimee affichable sur la carte native Home Assistant. Depuis `0.4.0-beta.3`, PyroVeille expose un polygone GeoJSON et une carte custom pour afficher une zone difforme transparente. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les problemes de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
 
 ### Generer la cle NASA FIRMS
 
@@ -103,7 +103,16 @@ show_hotspots: true
 show_projections: true
 ```
 
-La carte lit automatiquement les entites `device_tracker.pyroveille_*` et dessine les polygones `satellite_zone.geojson` quand ils sont disponibles.
+La carte lit automatiquement les entites `device_tracker.pyroveille_*` et dessine les polygones `satellite_zone.geojson` quand ils sont disponibles. Si certaines entites ont ete renommees, la carte les detecte aussi via leurs attributs PyroVeille (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`).
+
+Vous pouvez aussi forcer des entites :
+
+```yaml
+type: custom:pyroveille-map-card
+entities:
+  - device_tracker.mon_incendie_renomme
+  - device_tracker.ma_zone_satellite_renommee
+```
 
 Si la carte ne se charge pas apres une mise a jour, rechargez le navigateur, videz le cache du tableau de bord ou supprimez puis recreez la ressource Lovelace `/pyroveille_static/pyroveille-map-card.js`.
 

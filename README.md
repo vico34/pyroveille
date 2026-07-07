@@ -106,7 +106,7 @@ La direction utilisee est la direction sous le vent. Les marqueurs de projection
 
 ## Beta : zones satellite FIRMS
 
-La version `0.4.0-beta.4` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS, avec une carte custom capable d'afficher une zone difforme transparente.
+La version `0.4.0-beta.5` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS, avec une carte custom capable d'afficher une zone difforme transparente.
 
 Options a configurer :
 
@@ -142,7 +142,18 @@ show_hotspots: true
 show_projections: true
 ```
 
-La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Leaflet est embarque dans l'integration depuis `0.4.0-beta.4`, la carte ne depend donc plus du chargement externe depuis un CDN.
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.5`, elle detecte aussi les entites PyroVeille renommees via leurs attributs (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`) et deduplique les polygones.
+
+Si vous voulez forcer certaines entites, ajoutez-les explicitement :
+
+```yaml
+type: custom:pyroveille-map-card
+entities:
+  - device_tracker.mon_incendie_renomme
+  - device_tracker.ma_zone_satellite_renommee
+```
+
+Leaflet est embarque dans l'integration depuis `0.4.0-beta.4`, la carte ne depend donc plus du chargement externe depuis un CDN.
 
 Apres une mise a jour de beta, rechargez le navigateur ou supprimez/recreez la ressource Lovelace si Home Assistant conserve l'ancien JavaScript en cache.
 

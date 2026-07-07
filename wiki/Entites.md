@@ -103,7 +103,7 @@ show_hotspots: true
 show_projections: true
 ```
 
-La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les blocages ou lenteurs de chargement CDN.
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les blocages ou lenteurs de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs et deduplique les polygones de zone.
 
 ## Couleur des marqueurs
 
