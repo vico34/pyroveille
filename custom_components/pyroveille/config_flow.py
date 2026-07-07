@@ -59,7 +59,7 @@ class FeuxDeForetConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             coords: tuple[float, float] | None = None
             address = str(user_input.get(CONF_ADDRESS, "")).strip()
-            _normalize_telegram_service(user_input)
+            _normalize_telegram_target(user_input)
             if not address:
                 errors[CONF_ADDRESS] = "invalid_address"
             if user_input.get(CONF_CREATE_TELEGRAM_NOTIFICATIONS) and not user_input.get(CONF_TELEGRAM_NOTIFY_SERVICE):
@@ -120,7 +120,7 @@ class FeuxDeForetOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             coords: tuple[float, float] | None = None
             address = str(user_input.get(CONF_ADDRESS, "")).strip()
-            _normalize_telegram_service(user_input)
+            _normalize_telegram_target(user_input)
             if not address:
                 errors[CONF_ADDRESS] = "invalid_address"
             if user_input.get(CONF_CREATE_TELEGRAM_NOTIFICATIONS) and not user_input.get(CONF_TELEGRAM_NOTIFY_SERVICE):
@@ -252,12 +252,9 @@ def _schema(defaults: dict[str, Any], *, include_center: bool = True) -> vol.Sch
     return vol.Schema(fields)
 
 
-def _normalize_telegram_service(user_input: dict[str, Any]) -> None:
-    """Normalize the Telegram notify service name in-place."""
-    service = str(user_input.get(CONF_TELEGRAM_NOTIFY_SERVICE, "")).strip()
-    if service.startswith("notify."):
-        service = service.removeprefix("notify.")
-    user_input[CONF_TELEGRAM_NOTIFY_SERVICE] = service
+def _normalize_telegram_target(user_input: dict[str, Any]) -> None:
+    """Normalize the Telegram notify target in-place."""
+    user_input[CONF_TELEGRAM_NOTIFY_SERVICE] = str(user_input.get(CONF_TELEGRAM_NOTIFY_SERVICE, "")).strip()
 
 
 def _notification_distance(user_input: dict[str, Any]) -> float:

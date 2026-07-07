@@ -22,37 +22,40 @@ action:
 
 ## Telegram
 
-PyroVeille peut envoyer directement une notification Telegram si l'integration Telegram de Home Assistant expose un service `notify`.
+PyroVeille peut envoyer directement une notification Telegram si l'integration Telegram de Home Assistant expose une entite `notify.*` ou un service legacy `notify.telegram`.
 
 ### Cote Home Assistant
 
-Configurez Telegram dans Home Assistant avant d'activer l'option PyroVeille. Une fois Telegram configure, verifiez le nom du service dans `Outils de developpement > Services`. Le service attendu ressemble a :
+Configurez Telegram dans Home Assistant avant d'activer l'option PyroVeille. Une fois Telegram configure, verifiez la cible disponible. Les versions recentes de Home Assistant exposent souvent une entite `notify.*` a utiliser avec `notify.send_message`, par exemple :
+
+```text
+notify.telegram_bot_chat
+```
+
+Les configurations legacy peuvent exposer un service :
 
 ```text
 notify.telegram
 ```
 
-ou :
-
-```text
-notify.telegram_maison
-```
-
-Vous pouvez tester le service depuis les outils de developpement avec :
+Vous pouvez tester une entite moderne depuis les outils de developpement avec :
 
 ```yaml
-service: notify.telegram
+service: notify.send_message
 data:
-  title: Test PyroVeille
+  entity_id: notify.telegram_bot_chat
   message: Telegram est pret pour PyroVeille.
 ```
+
+Pour un service legacy, utilisez `service: notify.telegram` avec `message`.
 
 ### Cote PyroVeille
 
 Dans les options PyroVeille :
 
 - activez `Notifier via Telegram` ;
-- laissez `Service Telegram notify` a `telegram` si votre service est `notify.telegram` ;
-- saisissez seulement le suffixe du service pour un autre nom, par exemple `telegram_maison` pour `notify.telegram_maison`.
+- saisissez l'entite complete, par exemple `notify.telegram_bot_chat`, pour le mode moderne ;
+- ou laissez `telegram` si votre service legacy est `notify.telegram` ;
+- ou saisissez seulement le suffixe du service legacy, par exemple `telegram_maison` pour `notify.telegram_maison`.
 
-Si le service n'est pas disponible, PyroVeille conserve les notifications persistantes et ignore l'envoi Telegram sans bloquer la mise a jour.
+Si la cible n'est pas disponible, PyroVeille conserve les notifications persistantes, note l'erreur dans les diagnostics et ignore l'envoi Telegram sans bloquer la mise a jour.

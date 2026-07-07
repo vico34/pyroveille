@@ -9,7 +9,7 @@ Integration Home Assistant custom compatible HACS pour surveiller les signalemen
 - Filtre optionnel par departements.
 - Filtre optionnel sur les feux en cours uniquement.
 - Notification persistante Home Assistant lorsqu'un nouvel incendie entre dans le perimetre.
-- Notification Telegram optionnelle via un service `notify.telegram` existant dans Home Assistant.
+- Notification Telegram optionnelle via un service legacy `notify.telegram` ou une entite `notify.*` existante dans Home Assistant.
 - Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
 - Projection automatique de trajectoire basee sur le vent local Open-Meteo.
@@ -34,8 +34,8 @@ Champs principaux :
 - `Creer une notification persistante`: cree une notification Home Assistant sur nouvel incendie proche.
 - `Notifier seulement sous cette distance`: seuil optionnel en kilometres. `0` desactive le seuil.
 - `Inclure le lien feuxdeforet.fr`: ajoute ou retire le lien source dans les notifications.
-- `Notifier via Telegram`: envoie aussi l'alerte via Telegram si le service `notify` configure est disponible.
-- `Service Telegram notify`: nom du service Telegram, par defaut `telegram` pour appeler `notify.telegram`.
+- `Notifier via Telegram`: envoie aussi l'alerte via Telegram si la cible `notify` configuree est disponible.
+- `Service ou entite Telegram notify`: service legacy, par exemple `telegram` pour `notify.telegram`, ou entite moderne, par exemple `notify.telegram_bot_chat`.
 - `Mode de geocodage`: `Adresse puis commune` utilise l'API Adresse officielle puis Nominatim en secours. `Adresse stricte` limite le geocodage a l'API Adresse officielle.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.

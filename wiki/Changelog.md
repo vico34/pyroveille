@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+- Correction de l'envoi Telegram avec les entites `notify.*` modernes via `notify.send_message`.
+- Conservation de la compatibilite avec les anciens services `notify.telegram`.
+- Ajout de diagnostics Telegram pour afficher la cible configuree et la derniere erreur.
+
 ## 0.3.1
 
 - Ajout de l'option `Activer les projections automatiques`.

@@ -95,7 +95,8 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 CONF_TELEGRAM_NOTIFY_SERVICE,
                 data.get(CONF_TELEGRAM_NOTIFY_SERVICE, DEFAULT_TELEGRAM_NOTIFY_SERVICE),
             )
-        ).removeprefix("notify.")
+        ).strip()
+        self.last_telegram_notification_error: str | None = None
         self.enable_projections = bool(
             options.get(CONF_ENABLE_PROJECTIONS, data.get(CONF_ENABLE_PROJECTIONS, DEFAULT_ENABLE_PROJECTIONS))
         )
@@ -224,24 +225,48 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
 
     async def _async_send_telegram_notification(self, alert: FireAlert) -> None:
         """Send a Telegram notification through an existing Home Assistant notify service."""
-        if not self.telegram_notify_service:
+        target = self.telegram_notify_service
+        if not target:
             return
-        if not self.hass.services.has_service("notify", self.telegram_notify_service):
-            _LOGGER.info(
-                "Telegram notifications enabled but notify.%s is not available",
-                self.telegram_notify_service,
+        message = self._notification_message(alert)
+        legacy_service = target.removeprefix("notify.") if target.startswith("notify.") else target
+        try:
+            if self.hass.services.has_service("notify", legacy_service):
+                await self.hass.services.async_call(
+                    "notify",
+                    legacy_service,
+                    {
+                        "title": "Alerte incendie a proximite",
+                        "message": message,
+                        "data": {"url": alert.url} if alert.url else {},
+                    },
+                    blocking=True,
+                )
+                self.last_telegram_notification_error = None
+                return
+
+            notify_entity = target if target.startswith("notify.") else f"notify.{target}"
+            if self.hass.services.has_service("notify", "send_message") and self.hass.states.get(notify_entity):
+                await self.hass.services.async_call(
+                    "notify",
+                    "send_message",
+                    {
+                        "entity_id": notify_entity,
+                        "message": f"Alerte incendie a proximite\n\n{message}",
+                    },
+                    blocking=True,
+                )
+                self.last_telegram_notification_error = None
+                return
+
+            self.last_telegram_notification_error = (
+                f"Notify target '{target}' is not available. Use a legacy service like 'telegram' "
+                "or a notify entity like 'notify.telegram_bot_chat'."
             )
-            return
-        await self.hass.services.async_call(
-            "notify",
-            self.telegram_notify_service,
-            {
-                "title": "Alerte incendie a proximite",
-                "message": self._notification_message(alert),
-                "data": {"url": alert.url} if alert.url else {},
-            },
-            blocking=False,
-        )
+            _LOGGER.warning("Telegram notifications enabled but %s", self.last_telegram_notification_error)
+        except Exception as err:  # noqa: BLE001
+            self.last_telegram_notification_error = str(err)
+            _LOGGER.warning("Telegram notification failed: %s", err)
 
     def _notification_message(self, alert: FireAlert) -> str:
         """Build persistent notification content."""

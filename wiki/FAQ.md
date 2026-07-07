@@ -26,15 +26,26 @@ Si vous avez installe une ancienne version, supprimez puis recreez l'integration
 
 ## Telegram ne recoit rien
 
-Verifiez que Home Assistant expose bien un service `notify.telegram` ou equivalent dans `Outils de developpement > Services`.
+Verifiez d'abord que Telegram fonctionne depuis `Outils de developpement > Services`.
 
-Dans PyroVeille, saisissez seulement le suffixe du service :
+Pour une configuration recente avec entite `notify.*`, testez :
+
+```yaml
+service: notify.send_message
+data:
+  entity_id: notify.telegram_bot_chat
+  message: Test PyroVeille
+```
+
+Dans PyroVeille, saisissez alors l'entite complete, par exemple `notify.telegram_bot_chat`.
+
+Pour une configuration legacy avec service `notify.telegram`, saisissez seulement le suffixe du service :
 
 ```text
 telegram
 ```
 
-pour `notify.telegram`.
+Les diagnostics PyroVeille indiquent aussi `telegram_notifications.last_error` si la cible configuree n'est pas disponible.
 
 ## Les positions sur la carte sont-elles exactes ?
 

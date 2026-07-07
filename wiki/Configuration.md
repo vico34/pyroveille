@@ -20,22 +20,27 @@ L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les co
 - `Creer une notification persistante`: affiche une notification Home Assistant pour chaque nouvel incendie proche.
 - `Notifier seulement sous cette distance`: seuil optionnel en kilometres. `0` signifie que toutes les alertes dans le rayon configuré peuvent notifier.
 - `Inclure le lien feuxdeforet.fr dans les notifications`: ajoute le lien source dans les messages.
-- `Notifier via Telegram`: envoie aussi l'alerte via Telegram si le service `notify` configure est disponible.
-- `Service Telegram notify`: nom du service Telegram, par defaut `telegram` pour appeler `notify.telegram`. Si votre service s'appelle `notify.telegram_maison`, saisissez `telegram_maison`.
+- `Notifier via Telegram`: envoie aussi l'alerte via Telegram si la cible `notify` configuree est disponible.
+- `Service ou entite Telegram notify`: service legacy, par exemple `telegram` pour `notify.telegram`, ou entite moderne, par exemple `notify.telegram_bot_chat`.
 - `Geocoder les communes sans coordonnees natives`: place approximativement les signalements sur la carte quand la source ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
 
 ## Configuration Telegram
 
-PyroVeille n'installe pas Telegram lui-meme. Il reutilise un service `notify` deja configure dans Home Assistant.
+PyroVeille n'installe pas Telegram lui-meme. Il reutilise une cible `notify` deja configuree dans Home Assistant.
 
 1. Configurez d'abord Telegram dans Home Assistant avec votre bot Telegram et votre `chat_id`.
 2. Redemarrez Home Assistant si votre configuration Telegram le demande.
-3. Ouvrez `Outils de developpement > Services`.
-4. Cherchez les services commencant par `notify.`.
-5. Reperez le service Telegram disponible, par exemple `notify.telegram` ou `notify.telegram_maison`.
+3. Ouvrez `Outils de developpement > Services` et testez `notify.send_message`, ou cherchez un ancien service commencant par `notify.`.
+4. Reperez la cible Telegram disponible, par exemple `notify.telegram_bot_chat`, `notify.telegram` ou `notify.telegram_maison`.
 6. Dans les options PyroVeille, activez `Notifier via Telegram`.
-7. Dans `Service Telegram notify`, saisissez seulement la partie apres `notify.` :
+7. Dans `Service ou entite Telegram notify`, saisissez l'entite complete si vous utilisez `notify.send_message` :
+
+```text
+notify.telegram_bot_chat
+```
+
+ou saisissez seulement la partie apres `notify.` si vous utilisez un service legacy :
 
 ```text
 telegram
@@ -47,7 +52,7 @@ ou, pour `notify.telegram_maison` :
 telegram_maison
 ```
 
-Si le service Telegram n'est pas disponible, PyroVeille ignore l'envoi Telegram et continue les notifications persistantes Home Assistant.
+Si la cible Telegram n'est pas disponible, PyroVeille ignore l'envoi Telegram, note l'erreur dans les diagnostics et continue les notifications persistantes Home Assistant.
 
 ## Projections automatiques
 

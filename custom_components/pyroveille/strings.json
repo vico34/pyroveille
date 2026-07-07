@@ -14,7 +14,7 @@
           "notification_max_distance_km": "Notifier seulement sous cette distance",
           "include_link_in_notifications": "Inclure le lien feuxdeforet.fr dans les notifications",
           "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
-          "telegram_notify_service": "Service Telegram notify",
+          "telegram_notify_service": "Service ou entite Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
           "enable_projections": "Activer les projections automatiques",
           "api_base_url": "URL API feuxdeforet.fr"
@@ -46,7 +46,7 @@
           "notification_max_distance_km": "Notifier seulement sous cette distance",
           "include_link_in_notifications": "Inclure le lien feuxdeforet.fr dans les notifications",
           "create_telegram_notifications": "Notifier via Telegram si le service est disponible",
-          "telegram_notify_service": "Service Telegram notify",
+          "telegram_notify_service": "Service ou entite Telegram notify",
           "geocode_missing_coordinates": "Geocoder les communes sans coordonnees natives",
           "enable_projections": "Activer les projections automatiques",
           "api_base_url": "URL API feuxdeforet.fr"

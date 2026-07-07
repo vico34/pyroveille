@@ -34,6 +34,11 @@ async def async_get_config_entry_diagnostics(
             "uncertainty_km": coordinator.auto_projection_uncertainty_km,
             "wind_factor": coordinator.auto_projection_wind_factor,
         },
+        "telegram_notifications": {
+            "enabled": coordinator.create_telegram_notifications,
+            "target": coordinator.telegram_notify_service,
+            "last_error": coordinator.last_telegram_notification_error,
+        },
         "last_successful_update": coordinator.last_successful_update.isoformat()
         if coordinator.last_successful_update
         else None,
