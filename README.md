@@ -21,7 +21,7 @@ Si PyroVeille vous est utile, vous pouvez soutenir le projet via Buy Me a Coffee
 - Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
 - Projection automatique de trajectoire basee sur le vent local Open-Meteo.
-- Suivi live optionnel des avions et helicos visibles sur la carte FeuxDeForet, avec trace, cap, vitesse et altitude quand disponibles.
+- Suivi live optionnel des avions et helicos visibles sur la carte FeuxDeForet, rafraichi toutes les 10 secondes, avec trace, cap, vitesse et altitude quand disponibles.
 - Geocodage optionnel des communes lorsque la route publique ne fournit pas de coordonnees.
 
 ## Installation HACS
@@ -60,7 +60,7 @@ Champs principaux :
 - `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible, avec un libelle temporel comme `+1h`.
 - `device_tracker.pyroveille_fire_*_satellite_zone`: zone satellite estimee FIRMS, affichee comme un cercle GPS quand des hotspots sont disponibles.
 - `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS en beta, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
-- `device_tracker.pyroveille_aircraft_*`: moyens aeriens live FeuxDeForet, si le suivi avions/helicos est active. Les attributs exposent notamment `aircraft_type`, `callsign`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson`.
+- `device_tracker.pyroveille_aircraft_*`: moyens aeriens live FeuxDeForet, si le suivi avions/helicos est active. Ces entites sont rafraichies toutes les 10 secondes. Les attributs exposent notamment `aircraft_type`, `callsign`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson`.
 
 ## Apercu
 

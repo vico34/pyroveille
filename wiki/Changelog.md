@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0-beta.9
+
+- Ajout d'un rafraichissement dedie aux avions/helicos toutes les 10 secondes.
+- Conservation du rafraichissement global incendies/FIRMS/meteo a 2 minutes.
+
 ## 0.4.0-beta.8
 
 - Reduction de l'intervalle de rafraichissement global de 5 minutes a 2 minutes.

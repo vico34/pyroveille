@@ -50,7 +50,7 @@ Quand le suivi live avions et helicos est active, PyroVeille cree aussi des enti
 device_tracker.pyroveille_aircraft_<id>
 ```
 
-Ces entites representent les moyens aeriens publies par la carte FeuxDeForet. Elles exposent `aircraft_type`, `category_label`, `callsign`, `registration`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson` quand ces donnees sont disponibles.
+Ces entites representent les moyens aeriens publies par la carte FeuxDeForet. Elles sont rafraichies toutes les 10 secondes et exposent `aircraft_type`, `category_label`, `callsign`, `registration`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson` quand ces donnees sont disponibles.
 
 ## Exemple de carte Lovelace
 

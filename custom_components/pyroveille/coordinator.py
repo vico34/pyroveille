@@ -10,6 +10,7 @@ from math import atan2, cos, degrees, radians, sin
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -34,6 +35,7 @@ from .const import (
     CONF_RADIUS_KM,
     CONF_TELEGRAM_NOTIFY_SERVICE,
     DEFAULT_API_BASE_URL,
+    DEFAULT_AIRCRAFT_SCAN_INTERVAL,
     DEFAULT_AUTO_PROJECTION_HORIZON_HOURS,
     DEFAULT_AUTO_PROJECTION_UNCERTAINTY_KM,
     DEFAULT_AUTO_PROJECTION_WIND_FACTOR,
@@ -193,6 +195,21 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             for alert in self.nearby_alerts
             if (projection := self.projection_for_alert(alert)) is not None
         }
+
+    def async_start_aircraft_tracking(self):
+        """Start fast aircraft-only updates."""
+        if not self.enable_aircraft_tracking:
+            return lambda: None
+
+        async def _async_tick(now) -> None:
+            await self._async_update_aircraft_positions()
+            self.async_update_listeners()
+
+        return async_track_time_interval(
+            self.hass,
+            _async_tick,
+            DEFAULT_AIRCRAFT_SCAN_INTERVAL,
+        )
 
     async def _async_update_data(self) -> list[FireAlert]:
         """Fetch and filter recent fires."""

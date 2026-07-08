@@ -69,7 +69,7 @@ Voir [Projections](Projections) pour le fonctionnement et les limites.
 
 Quand `Activer le suivi live avions et helicos` est active, PyroVeille recupere le flux public utilise par la carte FeuxDeForet et cree une entite `device_tracker.pyroveille_aircraft_*` par moyen aerien visible.
 
-Ces entites exposent la position GPS, le type (`heli`, `dash`, `canadair` ou `aircraft`), l'indicatif, le cap, la vitesse, l'altitude et une trace `track_geojson` quand le flux la fournit. Le flux peut etre vide selon l'activite operationnelle en cours. En cas de doute, regardez les attributs de `sensor.derniere_mise_a_jour_pyroveille` : `aircraft_tracking_enabled`, `aircraft_count`, `aircraft_last_error` et `aircraft_entities`.
+Ces entites exposent la position GPS, le type (`heli`, `dash`, `canadair` ou `aircraft`), l'indicatif, le cap, la vitesse, l'altitude et une trace `track_geojson` quand le flux la fournit. Le suivi aerien utilise un rafraichissement dedie toutes les 10 secondes, independant du cycle incendies/FIRMS/meteo. Le flux peut etre vide selon l'activite operationnelle en cours. En cas de doute, regardez les attributs de `sensor.derniere_mise_a_jour_pyroveille` : `aircraft_tracking_enabled`, `aircraft_count`, `aircraft_last_error` et `aircraft_entities`.
 
 ## Zones satellite FIRMS beta
 
