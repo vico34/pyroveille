@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0-beta.8
+
+- Reduction de l'intervalle de rafraichissement global de 5 minutes a 2 minutes.
+
 ## 0.4.0-beta.7
 
 - Activation par defaut du suivi live avions/helicos en beta pour eviter une installation silencieuse.

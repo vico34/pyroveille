@@ -9,7 +9,7 @@ DOMAIN = "pyroveille"
 DEFAULT_NAME = "PyroVeille"
 DEFAULT_API_BASE_URL = "https://feuxdeforet.fr/api"
 DEFAULT_FEUXDEFORET_BASE_URL = "https://feuxdeforet.fr"
-DEFAULT_SCAN_INTERVAL = timedelta(minutes=5)
+DEFAULT_SCAN_INTERVAL = timedelta(minutes=2)
 DEFAULT_ADDRESS = "France"
 DEFAULT_RADIUS_KM = 30.0
 DEFAULT_MAX_ITEMS = 50
