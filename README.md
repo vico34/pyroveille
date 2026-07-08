@@ -21,6 +21,7 @@ Si PyroVeille vous est utile, vous pouvez soutenir le projet via Buy Me a Coffee
 - Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
 - Projection automatique de trajectoire basee sur le vent local Open-Meteo.
+- Suivi live optionnel des avions et helicos visibles sur la carte FeuxDeForet, avec trace, cap, vitesse et altitude quand disponibles.
 - Geocodage optionnel des communes lorsque la route publique ne fournit pas de coordonnees.
 
 ## Installation HACS
@@ -47,6 +48,7 @@ Champs principaux :
 - `Mode de geocodage`: `Adresse puis commune` utilise l'API Adresse officielle puis Nominatim en secours. `Adresse stricte` limite le geocodage a l'API Adresse officielle.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
+- `Activer le suivi live avions et helicos`: cree des marqueurs GPS pour les moyens aeriens publies par la carte FeuxDeForet. Desactive par defaut car le flux live peut etre vide ou indisponible.
 
 ## Entites creees
 
@@ -58,6 +60,7 @@ Champs principaux :
 - `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible, avec un libelle temporel comme `+1h`.
 - `device_tracker.pyroveille_fire_*_satellite_zone`: zone satellite estimee FIRMS, affichee comme un cercle GPS quand des hotspots sont disponibles.
 - `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS en beta, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
+- `device_tracker.pyroveille_aircraft_*`: moyens aeriens live FeuxDeForet, si le suivi avions/helicos est active. Les attributs exposent notamment `aircraft_type`, `callsign`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson`.
 
 ## Apercu
 
@@ -148,9 +151,10 @@ height: 520px
 show_satellite_zones: true
 show_hotspots: true
 show_projections: true
+show_aircraft: true
 ```
 
-La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.5`, elle detecte aussi les entites PyroVeille renommees via leurs attributs (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`) et deduplique les polygones.
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.5`, elle detecte aussi les entites PyroVeille renommees via leurs attributs (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`) et deduplique les polygones. Depuis `0.4.0-beta.6`, les entites avion/helico sont detectees via l'attribut `aircraft`, et leur trace est dessinee depuis `track_geojson` quand elle est disponible.
 
 Si vous voulez forcer certaines entites, ajoutez-les explicitement :
 

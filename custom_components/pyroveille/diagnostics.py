@@ -55,6 +55,14 @@ async def async_get_config_entry_diagnostics(
             "search_radius_km": coordinator.firms_search_radius_km,
             "has_map_key": bool(coordinator.firms_map_key),
         },
+        "aircraft_tracking": {
+            "enabled": coordinator.enable_aircraft_tracking,
+            "aircraft_count": len(coordinator.aircraft_positions),
+            "aircraft": {
+                aircraft_id: aircraft.as_dict()
+                for aircraft_id, aircraft in coordinator.aircraft_positions.items()
+            },
+        },
         "last_successful_update": coordinator.last_successful_update.isoformat()
         if coordinator.last_successful_update
         else None,

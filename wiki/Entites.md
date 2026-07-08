@@ -44,6 +44,14 @@ Cette entite est centree sur les hotspots detectes et utilise `location_accuracy
 
 Depuis `0.4.0-beta.3`, l'attribut `satellite_zone` contient aussi un objet `geojson` de type `Polygon`. Ce polygone est une enveloppe estimee autour des hotspots FIRMS et permet a la carte custom PyroVeille d'afficher une zone difforme transparente.
 
+Quand le suivi live avions et helicos est active, PyroVeille cree aussi des entites :
+
+```text
+device_tracker.pyroveille_aircraft_<id>
+```
+
+Ces entites representent les moyens aeriens publies par la carte FeuxDeForet. Elles exposent `aircraft_type`, `category_label`, `callsign`, `registration`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson` quand ces donnees sont disponibles.
+
 ## Exemple de carte Lovelace
 
 Apres une premiere detection, Home Assistant cree une entite `device_tracker` par incendie proche. La carte native `map` de Home Assistant utilise OpenStreetMap. Ajoutez les entites PyroVeille dans cette carte :
@@ -101,9 +109,10 @@ height: 520px
 show_satellite_zones: true
 show_hotspots: true
 show_projections: true
+show_aircraft: true
 ```
 
-La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les blocages ou lenteurs de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs et deduplique les polygones de zone.
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les blocages ou lenteurs de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs et deduplique les polygones de zone. Depuis `0.4.0-beta.6`, les entites avion/helico sont detectees via l'attribut `aircraft`, et leur trace est dessinee depuis `track_geojson`.
 
 ## Couleur des marqueurs
 
@@ -115,6 +124,8 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 - orange fonce : hotspot satellite FIRMS beta.
 - cercle orange transparent : zone satellite estimee FIRMS beta, si la carte affiche le cercle de precision GPS.
 - polygone orange transparent : zone satellite estimee FIRMS beta dans la carte custom PyroVeille.
+- bleu : avion de lutte incendie ou moyen aerien non classe.
+- vert : helicoptere.
 
 ## Captures
 
@@ -131,5 +142,7 @@ Chaque entite `device_tracker` contient aussi :
 - `satellite_zone`: zone satellite estimee pour les marqueurs d'incendie, si FIRMS est active et si des hotspots sont disponibles.
 - `estimated_radius_m`: rayon estime en metres sur les entites `device_tracker.pyroveille_fire_*_satellite_zone`.
 - `geojson`: polygone estime de la zone satellite dans l'attribut `satellite_zone`.
+- `aircraft`: `true` pour les moyens aeriens live.
+- `track_geojson`: trace du moyen aerien, si disponible.
 
 Si votre tableau de bord n'affiche pas l'image du marqueur, supprimez puis rajoutez la carte apres la premiere detection, ou ajoutez explicitement les nouvelles entites `device_tracker` PyroVeille dans la liste `entities`.

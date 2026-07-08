@@ -21,6 +21,7 @@ from .const import (
     CONF_CREATE_PERSISTENT_NOTIFICATIONS,
     CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
+    CONF_ENABLE_AIRCRAFT_TRACKING,
     CONF_ENABLE_PROJECTIONS,
     CONF_ENABLE_SATELLITE_ZONES,
     CONF_FIRMS_MAP_KEY,
@@ -38,6 +39,7 @@ from .const import (
     DEFAULT_AUTO_PROJECTION_WIND_FACTOR,
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
+    DEFAULT_ENABLE_AIRCRAFT_TRACKING,
     DEFAULT_ENABLE_PROJECTIONS,
     DEFAULT_ENABLE_SATELLITE_ZONES,
     DEFAULT_FIRMS_DAY_RANGE,
@@ -54,7 +56,7 @@ from .const import (
     DOMAIN,
     EVENT_NEARBY_FIRE,
 )
-from .models import FireAlert, FireHotspot, FireProjection, LocalWeather
+from .models import AircraftPosition, FireAlert, FireHotspot, FireProjection, LocalWeather
 from .util import destination_point, distance_km, parse_departments
 
 _LOGGER = logging.getLogger(__name__)
@@ -115,6 +117,12 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 data.get(CONF_ENABLE_SATELLITE_ZONES, DEFAULT_ENABLE_SATELLITE_ZONES),
             )
         )
+        self.enable_aircraft_tracking = bool(
+            options.get(
+                CONF_ENABLE_AIRCRAFT_TRACKING,
+                data.get(CONF_ENABLE_AIRCRAFT_TRACKING, DEFAULT_ENABLE_AIRCRAFT_TRACKING),
+            )
+        )
         self.firms_map_key = str(options.get(CONF_FIRMS_MAP_KEY, data.get(CONF_FIRMS_MAP_KEY, ""))).strip()
         self.firms_source = str(
             options.get(CONF_FIRMS_SOURCE, data.get(CONF_FIRMS_SOURCE, DEFAULT_FIRMS_SOURCE))
@@ -133,6 +141,7 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         self.last_error: str | None = None
         self.local_weather: dict[str, LocalWeather] = {}
         self.fire_hotspots: dict[str, list[FireHotspot]] = {}
+        self.aircraft_positions: dict[str, AircraftPosition] = {}
         self.client = FeuxDeForetClient(
             hass,
             options.get(CONF_API_BASE_URL, data.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL)),
@@ -198,6 +207,7 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         await asyncio.gather(
             self._async_update_local_weather(nearby),
             self._async_update_fire_hotspots(nearby),
+            self._async_update_aircraft_positions(),
         )
 
         self.last_successful_update = dt_util.utcnow()
@@ -353,6 +363,19 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             for alert, hotspots in zip(located_alerts, hotspot_results, strict=False)
             if hotspots
         }
+
+    async def _async_update_aircraft_positions(self) -> None:
+        """Fetch live aircraft positions."""
+        if not self.enable_aircraft_tracking:
+            self.aircraft_positions = {}
+            return
+        try:
+            aircraft = await self.client.async_get_aircraft_positions()
+        except FeuxDeForetApiError as err:
+            _LOGGER.debug("Could not fetch aircraft positions: %s", err)
+            self.aircraft_positions = {}
+            return
+        self.aircraft_positions = {item.aircraft_id: item for item in aircraft}
 
     def satellite_zone_for_alert(self, alert_id: str) -> dict[str, object] | None:
         """Return estimated satellite zone details for an alert."""

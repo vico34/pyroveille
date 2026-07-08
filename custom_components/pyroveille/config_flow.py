@@ -19,6 +19,7 @@ from .const import (
     CONF_CREATE_PERSISTENT_NOTIFICATIONS,
     CONF_CREATE_TELEGRAM_NOTIFICATIONS,
     CONF_DEPARTMENTS,
+    CONF_ENABLE_AIRCRAFT_TRACKING,
     CONF_ENABLE_PROJECTIONS,
     CONF_ENABLE_SATELLITE_ZONES,
     CONF_FIRMS_MAP_KEY,
@@ -34,6 +35,7 @@ from .const import (
     DEFAULT_ADDRESS,
     DEFAULT_CREATE_PERSISTENT_NOTIFICATIONS,
     DEFAULT_CREATE_TELEGRAM_NOTIFICATIONS,
+    DEFAULT_ENABLE_AIRCRAFT_TRACKING,
     DEFAULT_ENABLE_PROJECTIONS,
     DEFAULT_ENABLE_SATELLITE_ZONES,
     DEFAULT_FIRMS_SEARCH_RADIUS_KM,
@@ -259,6 +261,12 @@ def _schema(defaults: dict[str, Any], *, include_center: bool = True) -> vol.Sch
         vol.Required(
             CONF_ENABLE_SATELLITE_ZONES,
             default=defaults.get(CONF_ENABLE_SATELLITE_ZONES, DEFAULT_ENABLE_SATELLITE_ZONES),
+        )
+    ] = bool
+    fields[
+        vol.Required(
+            CONF_ENABLE_AIRCRAFT_TRACKING,
+            default=defaults.get(CONF_ENABLE_AIRCRAFT_TRACKING, DEFAULT_ENABLE_AIRCRAFT_TRACKING),
         )
     ] = bool
     fields[

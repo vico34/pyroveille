@@ -7,6 +7,7 @@ import re
 import csv
 from datetime import datetime
 from io import StringIO
+from math import atan2, cos, degrees, radians, sin
 from typing import Any
 from urllib.parse import urljoin
 
@@ -15,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_FEUXDEFORET_BASE_URL, DEFAULT_MAX_ITEMS
-from .models import FireAlert, FireHotspot, LocalWeather
+from .models import AircraftPosition, FireAlert, FireHotspot, LocalWeather
 from .util import distance_km
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +26,8 @@ ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 FIRMS_AREA_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
+FEUXDEFORET_HOME_URL = "https://feuxdeforet.fr"
+FEUXDEFORET_AIRCRAFT_URL = "https://feuxdeforet.fr/fdf/tracker/aircraft"
 
 
 class FeuxDeForetApiError(Exception):
@@ -46,6 +49,7 @@ class FeuxDeForetClient:
         self._api_base_url = api_base_url.rstrip("/")
         self._geocode_missing = geocode_missing
         self._geocode_cache: dict[str, tuple[float, float] | None] = {}
+        self._proxy_nonce: str | None = None
 
     async def async_get_recent_fires(self, max_items: int = DEFAULT_MAX_ITEMS) -> list[FireAlert]:
         """Fetch recent fire reports."""
@@ -225,6 +229,117 @@ class FeuxDeForetClient:
         hotspots.sort(key=lambda hotspot: hotspot.distance_km)
         return hotspots
 
+    async def async_get_aircraft_positions(self) -> list[AircraftPosition]:
+        """Fetch live aircraft and helicopter positions from feuxdeforet.fr."""
+        payload = await self._async_get_aircraft_payload()
+        items = _aircraft_items(payload)
+        aircraft = [self._normalize_aircraft(item) for item in items if isinstance(item, dict)]
+        return [item for item in aircraft if item is not None]
+
+    async def _async_get_aircraft_payload(self) -> Any:
+        """Request the aircraft tracker payload through the public feuxdeforet.fr proxy."""
+        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+        nonce = await self._async_get_proxy_nonce()
+        if nonce:
+            headers["X-FDF-Nonce"] = nonce
+
+        for attempt in range(2):
+            try:
+                async with self._session.get(FEUXDEFORET_AIRCRAFT_URL, headers=headers, timeout=20) as response:
+                    if response.status == 403 and attempt == 0:
+                        self._proxy_nonce = None
+                        nonce = await self._async_get_proxy_nonce()
+                        if nonce:
+                            headers["X-FDF-Nonce"] = nonce
+                        continue
+                    if response.status >= 400:
+                        raise FeuxDeForetApiError(
+                            f"{FEUXDEFORET_AIRCRAFT_URL} returned HTTP {response.status}"
+                        )
+                    return await response.json(content_type=None)
+            except (ClientError, TimeoutError) as err:
+                raise FeuxDeForetApiError(f"Could not fetch {FEUXDEFORET_AIRCRAFT_URL}") from err
+        return []
+
+    async def _async_get_proxy_nonce(self) -> str | None:
+        """Return the public proxy nonce embedded in the feuxdeforet.fr page."""
+        if self._proxy_nonce:
+            return self._proxy_nonce
+        headers = {"Accept": "text/html", "User-Agent": USER_AGENT}
+        try:
+            async with self._session.get(FEUXDEFORET_HOME_URL, headers=headers, timeout=20) as response:
+                if response.status >= 400:
+                    return None
+                html = await response.text()
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.debug("Could not fetch feuxdeforet.fr proxy nonce: %s", err)
+            return None
+
+        match = re.search(r'"proxyNonce":"([^"]+)"', html)
+        self._proxy_nonce = match.group(1) if match else None
+        return self._proxy_nonce
+
+    def _normalize_aircraft(self, item: dict[str, Any]) -> AircraftPosition | None:
+        """Normalize one aircraft tracker object."""
+        track = _aircraft_track(item)
+        position = _aircraft_position(item, track)
+        if position is None:
+            return None
+
+        aircraft_id = self._string(
+            _first_value(item, "icao_hex", "icao", "icao24", "fr24_id", "flight_id", "hex", "id")
+        )
+        if not aircraft_id:
+            aircraft_id = self._string(
+                _first_value(item, "callsign", "flight", "registration", "reg", "tail_number", "tail")
+            )
+        if not aircraft_id:
+            return None
+
+        category = _aircraft_category(
+            self._string(_first_value(item, "categorie", "category", "type", "type_engagement", "moyen"))
+        )
+        last_position = _last_position_dict(item)
+        heading = self._float(
+            _first_value(
+                last_position or item,
+                "heading",
+                "heading_deg",
+                "course",
+                "bearing",
+                "cog",
+                "track",
+            )
+        )
+        if heading is None:
+            heading = _bearing_from_track(track)
+        speed_kmh = _speed_kmh(
+            last_position or item,
+            _first_value(last_position or item, "speed_ms", "speed_kmh", "ground_speed", "gs", "speed_knots", "speed"),
+        )
+        return AircraftPosition(
+            aircraft_id=aircraft_id,
+            latitude=position[0],
+            longitude=position[1],
+            category=category,
+            category_label={"dash": "Dash", "heli": "Helicoptere", "canadair": "Canadair"}.get(
+                category, "Aeronef"
+            ),
+            callsign=self._string(_first_value(item, "callsign", "flight", "label")),
+            registration=self._string(_first_value(item, "registration", "reg", "tail_number", "tail")),
+            description=self._string(_first_value(item, "description", "desc", "aircraft_type")),
+            status=self._string(_first_value(item, "status", "etat", "state")),
+            first_seen=self._parse_datetime(_first_value(item, "first_seen", "firstSeen", "takeoff_at", "takeoffAt")),
+            last_seen=self._parse_datetime(_first_value(item, "last_seen", "lastSeen")),
+            last_position_change=self._parse_datetime(_first_value(item, "last_position_change", "lastPositionChange")),
+            heading=heading,
+            altitude_m=_altitude_m(last_position or item),
+            speed_kmh=speed_kmh,
+            vertical_rate=self._float(_first_value(last_position or item, "vertical_rate", "verticalRate")),
+            squawk=self._string(_first_value(last_position or item, "squawk")),
+            track=track,
+        )
+
     @staticmethod
     def _string(value: Any) -> str | None:
         if value is None:
@@ -389,3 +504,141 @@ def _bbox_around(latitude: float, longitude: float, radius_km: float) -> tuple[f
     south = max(-90.0, latitude - lat_delta)
     north = min(90.0, latitude + lat_delta)
     return west, south, east, north
+
+
+def _aircraft_items(payload: Any) -> list[Any]:
+    """Return aircraft items from accepted payload shapes."""
+    if isinstance(payload, list):
+        return payload
+    if not isinstance(payload, dict):
+        return []
+    for key in ("aircraft", "positions", "data"):
+        items = payload.get(key)
+        if isinstance(items, list):
+            return items
+    return []
+
+
+def _first_value(data: dict[str, Any] | None, *keys: str) -> Any:
+    """Return first non-empty value for keys."""
+    if not isinstance(data, dict):
+        return None
+    for key in keys:
+        value = data.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _last_position_dict(item: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the last tracker position object when available."""
+    for key in ("positions", "path", "track"):
+        positions = item.get(key)
+        if isinstance(positions, list) and positions:
+            last = positions[-1]
+            return last if isinstance(last, dict) else None
+    for key in ("position", "last_position", "coordinate"):
+        position = item.get(key)
+        if isinstance(position, dict):
+            return position
+    return None
+
+
+def _aircraft_position(
+    item: dict[str, Any],
+    track: list[tuple[float, float]] | None,
+) -> tuple[float, float] | None:
+    """Return the aircraft latitude and longitude."""
+    position = _last_position_dict(item)
+    candidates = [position, item]
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        latitude = FeuxDeForetClient._float(_first_value(candidate, "latitude", "lat"))
+        longitude = FeuxDeForetClient._float(_first_value(candidate, "longitude", "lon", "lng"))
+        if latitude is not None and longitude is not None:
+            return latitude, longitude
+    if track:
+        return track[-1]
+    return None
+
+
+def _aircraft_track(item: dict[str, Any]) -> list[tuple[float, float]] | None:
+    """Return normalized aircraft track points."""
+    raw_track = None
+    for key in ("positions", "path", "track"):
+        value = item.get(key)
+        if isinstance(value, list):
+            raw_track = value
+            break
+    if raw_track is None:
+        return None
+
+    points: list[tuple[float, float]] = []
+    for point in raw_track:
+        if isinstance(point, dict):
+            latitude = FeuxDeForetClient._float(_first_value(point, "latitude", "lat"))
+            longitude = FeuxDeForetClient._float(_first_value(point, "longitude", "lon", "lng"))
+        elif isinstance(point, (list, tuple)) and len(point) >= 2:
+            latitude = FeuxDeForetClient._float(point[0])
+            longitude = FeuxDeForetClient._float(point[1])
+        else:
+            continue
+        if latitude is not None and longitude is not None:
+            points.append((latitude, longitude))
+
+    return points or None
+
+
+def _aircraft_category(raw_category: str | None) -> str:
+    """Return normalized aircraft category."""
+    text = (raw_category or "").lower()
+    if any(key in text for key in ("dragon", "heli", "helico", "helicopter", "h145", "ec45")):
+        return "heli"
+    if any(key in text for key in ("canadair", "cl415", "cl-415", "cl215", "cl-215")):
+        return "canadair"
+    if any(key in text for key in ("dash", "q400")):
+        return "dash"
+    return "aircraft"
+
+
+def _speed_kmh(data: dict[str, Any] | None, value: Any) -> float | None:
+    """Return aircraft speed in km/h."""
+    speed = FeuxDeForetClient._float(value)
+    if speed is None:
+        return None
+    if isinstance(data, dict):
+        if data.get("speed_kmh") is not None:
+            return round(speed, 1)
+        if data.get("speed_ms") is not None:
+            return round(speed * 3.6, 1)
+    return round(speed * 1.852, 1)
+
+
+def _altitude_m(data: dict[str, Any] | None) -> float | None:
+    """Return altitude in meters."""
+    if not isinstance(data, dict):
+        return None
+    raw_value = _first_value(data, "alt_m", "altitude_m", "altitude_baro", "altitude", "alt")
+    altitude = FeuxDeForetClient._float(raw_value)
+    if altitude is None:
+        return None
+    if data.get("alt_m") is not None or data.get("altitude_m") is not None:
+        return round(altitude, 1)
+    if isinstance(raw_value, str) and "m" in raw_value.lower() and "ft" not in raw_value.lower():
+        return round(altitude, 1)
+    return round(altitude * 0.3048, 1)
+
+
+def _bearing_from_track(track: list[tuple[float, float]] | None) -> float | None:
+    """Return bearing from the last two track points."""
+    if not track or len(track) < 2:
+        return None
+    lat1, lon1 = track[-2]
+    lat2, lon2 = track[-1]
+    lat1_rad = radians(lat1)
+    lat2_rad = radians(lat2)
+    delta_lon = radians(lon2 - lon1)
+    y = sin(delta_lon) * cos(lat2_rad)
+    x = cos(lat1_rad) * sin(lat2_rad) - sin(lat1_rad) * cos(lat2_rad) * cos(delta_lon)
+    return round((degrees(atan2(y, x)) + 360) % 360, 1)

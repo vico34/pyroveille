@@ -161,3 +161,72 @@ class FireHotspot:
             "instrument": self.instrument,
             "source": self.source,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class AircraftPosition:
+    """Live aircraft position from feuxdeforet.fr."""
+
+    aircraft_id: str
+    latitude: float
+    longitude: float
+    category: str
+    category_label: str
+    callsign: str | None = None
+    registration: str | None = None
+    description: str | None = None
+    status: str | None = None
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
+    last_position_change: datetime | None = None
+    heading: float | None = None
+    altitude_m: float | None = None
+    speed_kmh: float | None = None
+    vertical_rate: float | None = None
+    squawk: str | None = None
+    track: list[tuple[float, float]] | None = None
+    source: str = "feuxdeforet.fr"
+
+    @property
+    def track_geojson(self) -> dict[str, object] | None:
+        """Return track as a GeoJSON LineString."""
+        if not self.track or len(self.track) < 2:
+            return None
+        return {
+            "type": "Feature",
+            "properties": {
+                "source": self.source,
+                "mode": "aircraft_track",
+                "aircraft_id": self.aircraft_id,
+                "category": self.category,
+            },
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [[round(lon, 6), round(lat, 6)] for lat, lon in self.track],
+            },
+        }
+
+    def as_dict(self) -> dict[str, object | None]:
+        """Return serializable attributes."""
+        return {
+            "aircraft_id": self.aircraft_id,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "category": self.category,
+            "category_label": self.category_label,
+            "callsign": self.callsign,
+            "registration": self.registration,
+            "description": self.description,
+            "status": self.status,
+            "first_seen": self.first_seen.isoformat() if self.first_seen else None,
+            "last_seen": self.last_seen.isoformat() if self.last_seen else None,
+            "last_position_change": self.last_position_change.isoformat() if self.last_position_change else None,
+            "heading": self.heading,
+            "altitude_m": self.altitude_m,
+            "speed_kmh": self.speed_kmh,
+            "vertical_rate": self.vertical_rate,
+            "squawk": self.squawk,
+            "track": [[lat, lon] for lat, lon in self.track] if self.track else None,
+            "track_geojson": self.track_geojson,
+            "source": self.source,
+        }

@@ -14,13 +14,15 @@ from homeassistant.util import slugify
 from .const import DOMAIN
 from .coordinator import FeuxDeForetDataCoordinator
 from .entity import FeuxDeForetEntity
-from .models import FireAlert, FireHotspot, FireProjection
+from .models import AircraftPosition, FireAlert, FireHotspot, FireProjection
 from .util import destination_point
 
 _ACTIVE_FIRE_COLOR = "#e53935"
 _INACTIVE_FIRE_COLOR = "#757575"
 _PROJECTION_COLOR = "#fb8c00"
 _HOTSPOT_COLOR = "#d84315"
+_AIRCRAFT_COLOR = "#1976d2"
+_HELICOPTER_COLOR = "#00897b"
 _PROJECTION_STEPS = (0.25, 0.5, 0.75, 1.0)
 
 
@@ -69,6 +71,7 @@ class FireTrackerPlatform:
         self._known_projection_ids: set[tuple[str, float]] = set()
         self._known_hotspot_ids: set[str] = set()
         self._known_satellite_zone_ids: set[str] = set()
+        self._known_aircraft_ids: set[str] = set()
 
     def async_update_entities(self) -> None:
         """Add trackers for newly discovered nearby fires."""
@@ -96,6 +99,12 @@ class FireTrackerPlatform:
                     continue
                 self._known_hotspot_ids.add(hotspot.hotspot_id)
                 new_entities.append(FireHotspotTrackerEntity(self._coordinator, hotspot.hotspot_id))
+
+        for aircraft in self._coordinator.aircraft_positions.values():
+            if aircraft.aircraft_id in self._known_aircraft_ids:
+                continue
+            self._known_aircraft_ids.add(aircraft.aircraft_id)
+            new_entities.append(AircraftTrackerEntity(self._coordinator, aircraft.aircraft_id))
         if new_entities:
             self._async_add_entities(new_entities)
 
@@ -432,5 +441,95 @@ class FireHotspotTrackerEntity(FeuxDeForetEntity, TrackerEntity):
 <circle cx="32" cy="32" r="22" fill="{_HOTSPOT_COLOR}" opacity="0.9"/>
 <circle cx="32" cy="32" r="8" fill="#fff3e0"/>
 <circle cx="32" cy="32" r="30" fill="none" stroke="{_HOTSPOT_COLOR}" stroke-width="4" opacity="0.55"/>
+</svg>"""
+        return f"data:image/svg+xml;utf8,{quote(svg)}"
+
+
+class AircraftTrackerEntity(FeuxDeForetEntity, TrackerEntity):
+    """Represent one live firefighting aircraft as a GPS tracker."""
+
+    _attr_source_type = SourceType.GPS
+
+    def __init__(self, coordinator: FeuxDeForetDataCoordinator, aircraft_id: str) -> None:
+        """Initialize aircraft tracker."""
+        super().__init__(coordinator)
+        self._aircraft_id = aircraft_id
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_aircraft_{aircraft_id}"
+        self._attr_suggested_object_id = f"pyroveille_aircraft_{slugify(aircraft_id)}"
+
+    @property
+    def _aircraft(self) -> AircraftPosition | None:
+        return self.coordinator.aircraft_positions.get(self._aircraft_id)
+
+    @property
+    def available(self) -> bool:
+        """Return whether the aircraft is still present in the live feed."""
+        return self._aircraft is not None
+
+    @property
+    def name(self) -> str:
+        """Return aircraft tracker name."""
+        aircraft = self._aircraft
+        if aircraft is None:
+            return f"Aeronef {self._aircraft_id}"
+        label = aircraft.callsign or aircraft.registration or aircraft.aircraft_id
+        return f"{label} {aircraft.category_label}"
+
+    @property
+    def icon(self) -> str:
+        """Return aircraft icon."""
+        aircraft = self._aircraft
+        if aircraft and aircraft.category == "heli":
+            return "mdi:helicopter"
+        return "mdi:airplane"
+
+    @property
+    def latitude(self) -> float | None:
+        """Return aircraft latitude."""
+        aircraft = self._aircraft
+        return aircraft.latitude if aircraft else None
+
+    @property
+    def longitude(self) -> float | None:
+        """Return aircraft longitude."""
+        aircraft = self._aircraft
+        return aircraft.longitude if aircraft else None
+
+    @property
+    def location_accuracy(self) -> int:
+        """Return aircraft position accuracy in meters."""
+        return 250
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        """Return aircraft details."""
+        aircraft = self._aircraft
+        if aircraft is None:
+            return {"id": self._aircraft_id, "aircraft": False}
+        color = _HELICOPTER_COLOR if aircraft.category == "heli" else _AIRCRAFT_COLOR
+        return {
+            **aircraft.as_dict(),
+            "id": self._aircraft_id,
+            "aircraft": True,
+            "aircraft_type": aircraft.category,
+            "marker_color": color,
+        }
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return an aircraft marker for map cards."""
+        aircraft = self._aircraft
+        if aircraft is None:
+            return None
+        color = _HELICOPTER_COLOR if aircraft.category == "heli" else _AIRCRAFT_COLOR
+        heading = aircraft.heading or 0
+        glyph = "H" if aircraft.category == "heli" else "A"
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="30" fill="{color}"/>
+<g transform="rotate({heading} 32 32)">
+<path fill="#ffffff" d="M32 8l9 31h-7l-2 9-2-9h-7L32 8z"/>
+<path fill="#ffffff" opacity="0.92" d="M13 36l19-7 19 7v6l-19-4-19 4z"/>
+</g>
+<text x="32" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#ffffff">{glyph}</text>
 </svg>"""
         return f"data:image/svg+xml;utf8,{quote(svg)}"

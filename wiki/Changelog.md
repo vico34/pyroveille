@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.6
+
+- Ajout du suivi live optionnel des avions et helicos via le flux FeuxDeForet.
+- Ajout des entites `device_tracker.pyroveille_aircraft_*` avec cap, vitesse, altitude et trace GeoJSON quand disponibles.
+- Affichage des moyens aeriens et de leurs traces dans `custom:pyroveille-map-card`.
+
 ## 0.4.0-beta.5
 
 - Detection des entites PyroVeille par attributs dans `pyroveille-map-card`, meme si les entites ont ete renommees.

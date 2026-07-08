@@ -25,6 +25,7 @@ L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les co
 - `Geocoder les communes sans coordonnees natives`: place approximativement les signalements sur la carte quand la source ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
 - `Activer les zones satellite FIRMS`: active la recuperation beta de hotspots satellite NASA FIRMS autour des incendies.
+- `Activer le suivi live avions et helicos`: cree des entites carte pour les avions et helicos visibles sur la carte FeuxDeForet. Desactive par defaut.
 - `NASA FIRMS MAP_KEY`: cle gratuite necessaire pour appeler les services FIRMS.
 - `Source satellite FIRMS`: source de donnees satellite, par defaut `VIIRS S-NPP NRT`.
 - `Rayon de recherche FIRMS`: rayon autour de chaque incendie utilise pour chercher les hotspots.
@@ -64,9 +65,15 @@ Depuis `0.3.1`, les projections peuvent etre activees ou desactivees dans les op
 
 Voir [Projections](Projections) pour le fonctionnement et les limites.
 
+## Suivi live avions et helicos
+
+Quand `Activer le suivi live avions et helicos` est active, PyroVeille recupere le flux public utilise par la carte FeuxDeForet et cree une entite `device_tracker.pyroveille_aircraft_*` par moyen aerien visible.
+
+Ces entites exposent la position GPS, le type (`heli`, `dash`, `canadair` ou `aircraft`), l'indicatif, le cap, la vitesse, l'altitude et une trace `track_geojson` quand le flux la fournit. Le flux peut etre vide selon l'activite operationnelle en cours.
+
 ## Zones satellite FIRMS beta
 
-Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Depuis `0.4.0-beta.2`, PyroVeille cree aussi une entite de zone satellite estimee affichable sur la carte native Home Assistant. Depuis `0.4.0-beta.3`, PyroVeille expose un polygone GeoJSON et une carte custom pour afficher une zone difforme transparente. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les problemes de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
+Depuis `0.4.0-beta.1`, PyroVeille peut recuperer des hotspots satellite NASA FIRMS autour des incendies proches. Depuis `0.4.0-beta.2`, PyroVeille cree aussi une entite de zone satellite estimee affichable sur la carte native Home Assistant. Depuis `0.4.0-beta.3`, PyroVeille expose un polygone GeoJSON et une carte custom pour afficher une zone difforme transparente. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les problemes de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs. Depuis `0.4.0-beta.6`, elle affiche aussi les moyens aeriens et leurs traces quand le suivi live est active. Cette fonction est desactivee par defaut et demande une `MAP_KEY` FIRMS.
 
 ### Generer la cle NASA FIRMS
 
@@ -101,9 +108,10 @@ height: 520px
 show_satellite_zones: true
 show_hotspots: true
 show_projections: true
+show_aircraft: true
 ```
 
-La carte lit automatiquement les entites `device_tracker.pyroveille_*` et dessine les polygones `satellite_zone.geojson` quand ils sont disponibles. Si certaines entites ont ete renommees, la carte les detecte aussi via leurs attributs PyroVeille (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`).
+La carte lit automatiquement les entites `device_tracker.pyroveille_*` et dessine les polygones `satellite_zone.geojson` quand ils sont disponibles. Si certaines entites ont ete renommees, la carte les detecte aussi via leurs attributs PyroVeille (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`, `aircraft`). Les traces avions/helicos sont dessinees depuis `track_geojson` quand elles sont disponibles.
 
 Vous pouvez aussi forcer des entites :
 

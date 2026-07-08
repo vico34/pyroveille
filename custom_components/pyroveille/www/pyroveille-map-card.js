@@ -11,6 +11,7 @@ class PyroVeilleMapCard extends HTMLElement {
       show_hotspots: true,
       show_projections: true,
       show_satellite_zones: true,
+      show_aircraft: true,
       ...config,
     };
     if (!this.shadowRoot) {
@@ -49,6 +50,7 @@ class PyroVeilleMapCard extends HTMLElement {
           border-radius: 50%;
           display: grid;
           place-items: center;
+          position: relative;
           color: #fff;
           font: 700 13px Arial, sans-serif;
           border: 2px solid #fff;
@@ -67,6 +69,35 @@ class PyroVeilleMapCard extends HTMLElement {
           height: 34px;
           background: #fb8c00;
           border-color: #263238;
+        }
+        .marker.aircraft {
+          width: 34px;
+          height: 34px;
+          background: #1976d2;
+          border-color: #ffffff;
+        }
+        .marker.aircraft.heli { background: #00897b; }
+        .marker.aircraft .arrow {
+          width: 0;
+          height: 0;
+          border-left: 7px solid transparent;
+          border-right: 7px solid transparent;
+          border-bottom: 18px solid #ffffff;
+          transform-origin: 50% 60%;
+        }
+        .marker.aircraft .label {
+          position: absolute;
+          bottom: -15px;
+          left: 50%;
+          transform: translateX(-50%);
+          min-width: 24px;
+          padding: 1px 4px;
+          border-radius: 8px;
+          background: rgba(0, 0, 0, 0.72);
+          color: #fff;
+          font-size: 10px;
+          line-height: 12px;
+          white-space: nowrap;
         }
         .leaflet-container {
           font-family: var(--primary-font-family, Arial, sans-serif);
@@ -153,6 +184,9 @@ class PyroVeilleMapCard extends HTMLElement {
         this._drawMarker(attrs, bounds, "hotspot", "", state);
       } else if (this._isProjection(entityId, attrs) && this.config.show_projections) {
         this._drawMarker(attrs, bounds, "projection", attrs.projection_label || "+", state);
+      } else if (this._isAircraft(entityId, attrs) && this.config.show_aircraft) {
+        this._drawAircraftTrack(attrs, bounds);
+        this._drawAircraftMarker(attrs, bounds, state);
       } else if (this._isFire(entityId, attrs)) {
         this._drawMarker(attrs, bounds, attrs.fire_status === "inactive" ? "inactive" : "fire", "F", state);
         if (this.config.show_satellite_zones && attrs.satellite_zone?.geojson) {
@@ -204,6 +238,8 @@ class PyroVeilleMapCard extends HTMLElement {
       || attrs.satellite_zone === true
       || attrs.satellite_zone?.geojson != null
       || attrs.geojson != null
+      || attrs.aircraft === true
+      || attrs.track_geojson != null
       || attrs.hotspot_id != null
       || attrs.projection_label != null
       || attrs.mode === "satellite_hotspots";
@@ -213,7 +249,8 @@ class PyroVeilleMapCard extends HTMLElement {
     return (attrs.fire_status != null || entityId.includes("pyroveille_fire_"))
       && !this._isProjection(entityId, attrs)
       && !this._isSatelliteZone(entityId, attrs)
-      && !this._isHotspot(entityId, attrs);
+      && !this._isHotspot(entityId, attrs)
+      && !this._isAircraft(entityId, attrs);
   }
 
   _isProjection(entityId, attrs = {}) {
@@ -226,6 +263,10 @@ class PyroVeilleMapCard extends HTMLElement {
 
   _isSatelliteZone(entityId, attrs) {
     return entityId.endsWith("_satellite_zone") || attrs.satellite_zone === true || attrs.mode === "satellite_hotspots";
+  }
+
+  _isAircraft(entityId, attrs = {}) {
+    return entityId.includes("pyroveille_aircraft_") || attrs.aircraft === true || attrs.aircraft_id != null;
   }
 
   _drawSatelliteZone(attrs, bounds, drawnZones) {
@@ -261,6 +302,26 @@ class PyroVeilleMapCard extends HTMLElement {
     }
   }
 
+  _drawAircraftTrack(attrs, bounds) {
+    const geojson = attrs.track_geojson;
+    if (!geojson) {
+      return;
+    }
+    const color = attrs.aircraft_type === "heli" ? "#00897b" : "#1976d2";
+    const layer = window.L.geoJSON(geojson, {
+      style: {
+        color,
+        weight: 3,
+        opacity: 0.82,
+      },
+    }).addTo(this.layers);
+    const layerBounds = layer.getBounds();
+    if (layerBounds.isValid()) {
+      bounds.push(layerBounds.getSouthWest());
+      bounds.push(layerBounds.getNorthEast());
+    }
+  }
+
   _drawMarker(attrs, bounds, markerClass, label, state) {
     const latitude = this._number(attrs.latitude);
     const longitude = this._number(attrs.longitude);
@@ -278,6 +339,26 @@ class PyroVeilleMapCard extends HTMLElement {
     bounds.push([latitude, longitude]);
   }
 
+  _drawAircraftMarker(attrs, bounds, state) {
+    const latitude = this._number(attrs.latitude);
+    const longitude = this._number(attrs.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return;
+    }
+    const heading = this._number(attrs.heading) || 0;
+    const isHeli = attrs.aircraft_type === "heli" || attrs.category === "heli";
+    const label = this._escapeHtml(attrs.callsign || attrs.registration || attrs.aircraft_id || "A");
+    const icon = window.L.divIcon({
+      className: "",
+      html: `<div class="marker aircraft ${isHeli ? "heli" : ""}"><div class="arrow" style="transform: rotate(${heading}deg)"></div><div class="label">${label}</div></div>`,
+      iconSize: [38, 46],
+      iconAnchor: [19, 19],
+    });
+    const marker = window.L.marker([latitude, longitude], { icon }).addTo(this.layers);
+    marker.bindPopup(this._popupContent(state));
+    bounds.push([latitude, longitude]);
+  }
+
   _number(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number : undefined;
@@ -289,11 +370,24 @@ class PyroVeilleMapCard extends HTMLElement {
 
   _popupContent(state) {
     const attrs = state.attributes || {};
-    const name = attrs.friendly_name || state.entity_id;
+    const name = this._escapeHtml(attrs.friendly_name || state.entity_id);
     const distance = attrs.distance_km != null ? `<br>Distance: ${attrs.distance_km} km` : "";
     const status = attrs.fire_status ? `<br>Statut: ${attrs.fire_status}` : "";
     const radius = attrs.estimated_radius_m ? `<br>Rayon estime: ${attrs.estimated_radius_m} m` : "";
-    return `<strong>${name}</strong>${status}${distance}${radius}`;
+    const aircraftType = this._escapeHtml(attrs.category_label || attrs.aircraft_type || "aeronef");
+    const aircraft = attrs.aircraft ? `<br>Type: ${aircraftType}` : "";
+    const speed = attrs.speed_kmh != null ? `<br>Vitesse: ${attrs.speed_kmh} km/h` : "";
+    const altitude = attrs.altitude_m != null ? `<br>Altitude: ${attrs.altitude_m} m` : "";
+    return `<strong>${name}</strong>${status}${distance}${radius}${aircraft}${speed}${altitude}`;
+  }
+
+  _escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 }
 
@@ -306,6 +400,6 @@ if (!window.customCards.some((card) => card.type === "pyroveille-map-card")) {
   window.customCards.push({
     type: "pyroveille-map-card",
     name: "PyroVeille Map Card",
-    description: "Carte PyroVeille avec incendies, projections, hotspots et zones satellite FIRMS.",
+    description: "Carte PyroVeille avec incendies, projections, hotspots, zones satellite FIRMS et moyens aeriens.",
   });
 }
