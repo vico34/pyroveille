@@ -120,6 +120,9 @@ class LastSuccessfulUpdateSensor(FeuxDeForetEntity, SensorEntity):
                 for hotspots in self.coordinator.fire_hotspots.values()
                 for hotspot in hotspots
             ],
+            "aircraft_tracking_enabled": self.coordinator.enable_aircraft_tracking,
+            "aircraft_count": len(self.coordinator.aircraft_positions),
+            "aircraft_last_error": self.coordinator.last_aircraft_tracking_error,
             "aircraft_entities": [
                 f"device_tracker.pyroveille_aircraft_{slugify(aircraft.aircraft_id)}"
                 for aircraft in self.coordinator.aircraft_positions.values()

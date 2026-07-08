@@ -48,7 +48,7 @@ Champs principaux :
 - `Mode de geocodage`: `Adresse puis commune` utilise l'API Adresse officielle puis Nominatim en secours. `Adresse stricte` limite le geocodage a l'API Adresse officielle.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
-- `Activer le suivi live avions et helicos`: cree des marqueurs GPS pour les moyens aeriens publies par la carte FeuxDeForet. Desactive par defaut car le flux live peut etre vide ou indisponible.
+- `Activer le suivi live avions et helicos`: cree des marqueurs GPS pour les moyens aeriens publies par la carte FeuxDeForet. Active par defaut en beta, mais desactivable si le flux live n'est pas utile.
 
 ## Entites creees
 
@@ -154,7 +154,7 @@ show_projections: true
 show_aircraft: true
 ```
 
-La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.5`, elle detecte aussi les entites PyroVeille renommees via leurs attributs (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`) et deduplique les polygones. Depuis `0.4.0-beta.6`, les entites avion/helico sont detectees via l'attribut `aircraft`, et leur trace est dessinee depuis `track_geojson` quand elle est disponible.
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.5`, elle detecte aussi les entites PyroVeille renommees via leurs attributs (`fire_status`, `satellite_zone`, `satellite_hotspot`, `projection`) et deduplique les polygones. Depuis `0.4.0-beta.7`, les entites avion/helico sont detectees via l'attribut `aircraft`, et leur trace est dessinee depuis `track_geojson` quand elle est disponible.
 
 Si vous voulez forcer certaines entites, ajoutez-les explicitement :
 

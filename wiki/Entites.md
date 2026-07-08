@@ -112,7 +112,7 @@ show_projections: true
 show_aircraft: true
 ```
 
-La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les blocages ou lenteurs de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs et deduplique les polygones de zone. Depuis `0.4.0-beta.6`, les entites avion/helico sont detectees via l'attribut `aircraft`, et leur trace est dessinee depuis `track_geojson`.
+La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `device_tracker.pyroveille_*`. Depuis `0.4.0-beta.4`, Leaflet est embarque localement dans l'integration pour eviter les blocages ou lenteurs de chargement CDN. Depuis `0.4.0-beta.5`, la carte detecte aussi les entites PyroVeille renommees via leurs attributs et deduplique les polygones de zone. Depuis `0.4.0-beta.7`, les entites avion/helico sont detectees via l'attribut `aircraft`, et leur trace est dessinee depuis `track_geojson`.
 
 ## Couleur des marqueurs
 

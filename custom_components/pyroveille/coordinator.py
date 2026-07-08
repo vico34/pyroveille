@@ -108,6 +108,7 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             )
         ).strip()
         self.last_telegram_notification_error: str | None = None
+        self.last_aircraft_tracking_error: str | None = None
         self.enable_projections = bool(
             options.get(CONF_ENABLE_PROJECTIONS, data.get(CONF_ENABLE_PROJECTIONS, DEFAULT_ENABLE_PROJECTIONS))
         )
@@ -368,14 +369,17 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         """Fetch live aircraft positions."""
         if not self.enable_aircraft_tracking:
             self.aircraft_positions = {}
+            self.last_aircraft_tracking_error = None
             return
         try:
             aircraft = await self.client.async_get_aircraft_positions()
         except FeuxDeForetApiError as err:
             _LOGGER.debug("Could not fetch aircraft positions: %s", err)
             self.aircraft_positions = {}
+            self.last_aircraft_tracking_error = str(err)
             return
         self.aircraft_positions = {item.aircraft_id: item for item in aircraft}
+        self.last_aircraft_tracking_error = None
 
     def satellite_zone_for_alert(self, alert_id: str) -> dict[str, object] | None:
         """Return estimated satellite zone details for an alert."""

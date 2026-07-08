@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.7
+
+- Activation par defaut du suivi live avions/helicos en beta pour eviter une installation silencieuse.
+- Ajout des diagnostics `aircraft_tracking_enabled`, `aircraft_count`, `aircraft_last_error` et `aircraft_entities`.
+- Mise a jour du `User-Agent` et de la documentation du suivi aerien.
+
 ## 0.4.0-beta.6
 
 - Ajout du suivi live optionnel des avions et helicos via le flux FeuxDeForet.
