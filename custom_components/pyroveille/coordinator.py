@@ -35,6 +35,8 @@ from .const import (
     CONF_RADIUS_KM,
     CONF_TELEGRAM_NOTIFY_SERVICE,
     DEFAULT_API_BASE_URL,
+    DEFAULT_ADSB_AIRCRAFT_SCAN_INTERVAL,
+    DEFAULT_ADSB_SEARCH_RADIUS_KM,
     DEFAULT_AIRCRAFT_SCAN_INTERVAL,
     DEFAULT_AUTO_PROJECTION_HORIZON_HOURS,
     DEFAULT_AUTO_PROJECTION_UNCERTAINTY_KM,
@@ -145,6 +147,9 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         self.local_weather: dict[str, LocalWeather] = {}
         self.fire_hotspots: dict[str, list[FireHotspot]] = {}
         self.aircraft_positions: dict[str, AircraftPosition] = {}
+        self.adsb_aircraft_positions: dict[str, AircraftPosition] = {}
+        self.last_adsb_aircraft_error: str | None = None
+        self._last_adsb_aircraft_update: datetime | None = None
         self.client = FeuxDeForetClient(
             hass,
             options.get(CONF_API_BASE_URL, data.get(CONF_API_BASE_URL, DEFAULT_API_BASE_URL)),
@@ -386,17 +391,46 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         """Fetch live aircraft positions."""
         if not self.enable_aircraft_tracking:
             self.aircraft_positions = {}
+            self.adsb_aircraft_positions = {}
             self.last_aircraft_tracking_error = None
+            self.last_adsb_aircraft_error = None
             return
+        await self._async_update_adsb_aircraft_positions_if_due()
         try:
-            aircraft = await self.client.async_get_aircraft_positions()
+            feuxdeforet_aircraft = await self.client.async_get_aircraft_positions()
         except FeuxDeForetApiError as err:
             _LOGGER.debug("Could not fetch aircraft positions: %s", err)
-            self.aircraft_positions = {}
+            feuxdeforet_aircraft = []
             self.last_aircraft_tracking_error = str(err)
+        else:
+            self.last_aircraft_tracking_error = None
+        self.aircraft_positions = _merge_aircraft_positions(
+            list(self.adsb_aircraft_positions.values()),
+            feuxdeforet_aircraft,
+        )
+
+    async def _async_update_adsb_aircraft_positions_if_due(self) -> None:
+        """Fetch ADS-B firefighting aircraft on a slower cadence."""
+        now = dt_util.utcnow()
+        if (
+            self._last_adsb_aircraft_update is not None
+            and now - self._last_adsb_aircraft_update < DEFAULT_ADSB_AIRCRAFT_SCAN_INTERVAL
+        ):
             return
-        self.aircraft_positions = {item.aircraft_id: item for item in aircraft}
-        self.last_aircraft_tracking_error = None
+        self._last_adsb_aircraft_update = now
+        radius_km = max(self.radius_km, DEFAULT_ADSB_SEARCH_RADIUS_KM)
+        try:
+            aircraft = await self.client.async_get_adsb_firefighting_aircraft(
+                self.center_latitude,
+                self.center_longitude,
+                radius_km,
+            )
+        except FeuxDeForetApiError as err:
+            _LOGGER.debug("Could not fetch ADS-B aircraft positions: %s", err)
+            self.last_adsb_aircraft_error = str(err)
+            return
+        self.adsb_aircraft_positions = {item.aircraft_id: item for item in aircraft}
+        self.last_adsb_aircraft_error = None
 
     def satellite_zone_for_alert(self, alert_id: str) -> dict[str, object] | None:
         """Return estimated satellite zone details for an alert."""
@@ -443,6 +477,27 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
                 "east": round(max(longitudes), 6),
             },
         }
+
+
+def _merge_aircraft_positions(
+    fallback_aircraft: list[AircraftPosition],
+    primary_aircraft: list[AircraftPosition],
+) -> dict[str, AircraftPosition]:
+    """Merge aircraft lists, keeping the primary source for duplicates."""
+    merged_by_identity: dict[str, AircraftPosition] = {}
+    for aircraft in fallback_aircraft:
+        merged_by_identity[_aircraft_identity(aircraft)] = aircraft
+    for aircraft in primary_aircraft:
+        merged_by_identity[_aircraft_identity(aircraft)] = aircraft
+    return {aircraft.aircraft_id: aircraft for aircraft in merged_by_identity.values()}
+
+
+def _aircraft_identity(aircraft: AircraftPosition) -> str:
+    """Return stable identity across FeuxDeForet and ADS-B sources."""
+    for value in (aircraft.registration, aircraft.callsign, aircraft.aircraft_id):
+        if value:
+            return str(value).replace(" ", "").upper()
+    return aircraft.aircraft_id
 
 
 def _satellite_zone_polygon(

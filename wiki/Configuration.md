@@ -69,7 +69,9 @@ Voir [Projections](Projections) pour le fonctionnement et les limites.
 
 Quand `Activer le suivi live avions et helicos` est active, PyroVeille recupere le flux public utilise par la carte FeuxDeForet et cree une entite `device_tracker.pyroveille_aircraft_*` par moyen aerien visible.
 
-Ces entites exposent la position GPS, le type (`heli`, `dash`, `canadair` ou `aircraft`), l'indicatif, le cap, la vitesse, l'altitude et une trace `track_geojson` quand le flux la fournit. Le suivi aerien utilise un rafraichissement dedie toutes les 10 secondes, independant du cycle incendies/FIRMS/meteo. Le flux peut etre vide selon l'activite operationnelle en cours. En cas de doute, regardez les attributs de `sensor.derniere_mise_a_jour_pyroveille` : `aircraft_tracking_enabled`, `aircraft_count`, `aircraft_last_error` et `aircraft_entities`.
+Depuis `0.4.0-beta.10`, PyroVeille complete ce flux avec un fallback ADS-B via `api.adsb.lol`, limite a la zone configuree et filtre sur les moyens Securite Civile connus : Canadair/Pelican, Dash/Milan et helicos Dragon. FeuxDeForet reste prioritaire en cas de doublon.
+
+Ces entites exposent la position GPS, le type (`heli`, `dash`, `canadair` ou `aircraft`), l'indicatif, le cap, la vitesse, l'altitude, la source et une trace `track_geojson` quand le flux la fournit. Le suivi FeuxDeForet utilise un rafraichissement dedie toutes les 10 secondes, independant du cycle incendies/FIRMS/meteo. Le fallback ADS-B est rafraichi toutes les 60 secondes. Les flux peuvent etre vides selon l'activite operationnelle en cours et selon ce que les sources publiques voient. En cas de doute, regardez les attributs de `sensor.derniere_mise_a_jour_pyroveille` : `aircraft_tracking_enabled`, `aircraft_count`, `aircraft_last_error`, `adsb_aircraft_count`, `adsb_aircraft_last_error` et `aircraft_entities`.
 
 ## Zones satellite FIRMS beta
 

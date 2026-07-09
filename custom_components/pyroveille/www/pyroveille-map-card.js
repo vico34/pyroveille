@@ -77,6 +77,7 @@ class PyroVeilleMapCard extends HTMLElement {
           border-color: #ffffff;
         }
         .marker.aircraft.heli { background: #00897b; }
+        .marker.aircraft.canadair { background: #039be5; }
         .marker.aircraft .arrow {
           width: 0;
           height: 0;
@@ -307,7 +308,7 @@ class PyroVeilleMapCard extends HTMLElement {
     if (!geojson) {
       return;
     }
-    const color = attrs.aircraft_type === "heli" ? "#00897b" : "#1976d2";
+    const color = this._aircraftColor(attrs);
     const layer = window.L.geoJSON(geojson, {
       style: {
         color,
@@ -346,17 +347,29 @@ class PyroVeilleMapCard extends HTMLElement {
       return;
     }
     const heading = this._number(attrs.heading) || 0;
-    const isHeli = attrs.aircraft_type === "heli" || attrs.category === "heli";
+    const category = attrs.aircraft_type || attrs.category;
+    const markerType = category === "heli" ? "heli" : category === "canadair" ? "canadair" : "";
     const label = this._escapeHtml(attrs.callsign || attrs.registration || attrs.aircraft_id || "A");
     const icon = window.L.divIcon({
       className: "",
-      html: `<div class="marker aircraft ${isHeli ? "heli" : ""}"><div class="arrow" style="transform: rotate(${heading}deg)"></div><div class="label">${label}</div></div>`,
+      html: `<div class="marker aircraft ${markerType}"><div class="arrow" style="transform: rotate(${heading}deg)"></div><div class="label">${label}</div></div>`,
       iconSize: [38, 46],
       iconAnchor: [19, 19],
     });
     const marker = window.L.marker([latitude, longitude], { icon }).addTo(this.layers);
     marker.bindPopup(this._popupContent(state));
     bounds.push([latitude, longitude]);
+  }
+
+  _aircraftColor(attrs) {
+    const category = attrs.aircraft_type || attrs.category;
+    if (category === "heli") {
+      return "#00897b";
+    }
+    if (category === "canadair") {
+      return "#039be5";
+    }
+    return "#1976d2";
   }
 
   _number(value) {

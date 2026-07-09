@@ -123,6 +123,8 @@ class LastSuccessfulUpdateSensor(FeuxDeForetEntity, SensorEntity):
             "aircraft_tracking_enabled": self.coordinator.enable_aircraft_tracking,
             "aircraft_count": len(self.coordinator.aircraft_positions),
             "aircraft_last_error": self.coordinator.last_aircraft_tracking_error,
+            "adsb_aircraft_count": len(self.coordinator.adsb_aircraft_positions),
+            "adsb_aircraft_last_error": self.coordinator.last_adsb_aircraft_error,
             "aircraft_entities": [
                 f"device_tracker.pyroveille_aircraft_{slugify(aircraft.aircraft_id)}"
                 for aircraft in self.coordinator.aircraft_positions.values()

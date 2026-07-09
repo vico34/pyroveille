@@ -58,7 +58,9 @@ async def async_get_config_entry_diagnostics(
         "aircraft_tracking": {
             "enabled": coordinator.enable_aircraft_tracking,
             "aircraft_count": len(coordinator.aircraft_positions),
+            "adsb_aircraft_count": len(coordinator.adsb_aircraft_positions),
             "last_error": coordinator.last_aircraft_tracking_error,
+            "adsb_last_error": coordinator.last_adsb_aircraft_error,
             "aircraft": {
                 aircraft_id: aircraft.as_dict()
                 for aircraft_id, aircraft in coordinator.aircraft_positions.items()

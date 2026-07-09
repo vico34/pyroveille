@@ -22,6 +22,7 @@ _INACTIVE_FIRE_COLOR = "#757575"
 _PROJECTION_COLOR = "#fb8c00"
 _HOTSPOT_COLOR = "#d84315"
 _AIRCRAFT_COLOR = "#1976d2"
+_CANADAIR_COLOR = "#039be5"
 _HELICOPTER_COLOR = "#00897b"
 _PROJECTION_STEPS = (0.25, 0.5, 0.75, 1.0)
 
@@ -506,7 +507,7 @@ class AircraftTrackerEntity(FeuxDeForetEntity, TrackerEntity):
         aircraft = self._aircraft
         if aircraft is None:
             return {"id": self._aircraft_id, "aircraft": False}
-        color = _HELICOPTER_COLOR if aircraft.category == "heli" else _AIRCRAFT_COLOR
+        color = _aircraft_marker_color(aircraft)
         return {
             **aircraft.as_dict(),
             "id": self._aircraft_id,
@@ -521,9 +522,9 @@ class AircraftTrackerEntity(FeuxDeForetEntity, TrackerEntity):
         aircraft = self._aircraft
         if aircraft is None:
             return None
-        color = _HELICOPTER_COLOR if aircraft.category == "heli" else _AIRCRAFT_COLOR
+        color = _aircraft_marker_color(aircraft)
         heading = aircraft.heading or 0
-        glyph = "H" if aircraft.category == "heli" else "A"
+        glyph = {"heli": "H", "canadair": "C", "dash": "D"}.get(aircraft.category, "A")
         svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <circle cx="32" cy="32" r="30" fill="{color}"/>
 <g transform="rotate({heading} 32 32)">
@@ -533,3 +534,12 @@ class AircraftTrackerEntity(FeuxDeForetEntity, TrackerEntity):
 <text x="32" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#ffffff">{glyph}</text>
 </svg>"""
         return f"data:image/svg+xml;utf8,{quote(svg)}"
+
+
+def _aircraft_marker_color(aircraft: AircraftPosition) -> str:
+    """Return marker color for one aircraft category."""
+    if aircraft.category == "heli":
+        return _HELICOPTER_COLOR
+    if aircraft.category == "canadair":
+        return _CANADAIR_COLOR
+    return _AIRCRAFT_COLOR

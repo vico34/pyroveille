@@ -22,6 +22,7 @@ Si PyroVeille vous est utile, vous pouvez soutenir le projet via Buy Me a Coffee
 - Entites `device_tracker` GPS pour afficher les incendies proches sur la carte Home Assistant.
 - Projection automatique de trajectoire basee sur le vent local Open-Meteo.
 - Suivi live optionnel des avions et helicos visibles sur la carte FeuxDeForet, rafraichi toutes les 10 secondes, avec trace, cap, vitesse et altitude quand disponibles.
+- Fallback ADS-B filtre sur les moyens Securite Civile pour recuperer aussi des Canadair/Pelican absents du flux FeuxDeForet quand ils sont visibles publiquement.
 - Geocodage optionnel des communes lorsque la route publique ne fournit pas de coordonnees.
 
 ## Installation HACS
@@ -48,7 +49,7 @@ Champs principaux :
 - `Mode de geocodage`: `Adresse puis commune` utilise l'API Adresse officielle puis Nominatim en secours. `Adresse stricte` limite le geocodage a l'API Adresse officielle.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
-- `Activer le suivi live avions et helicos`: cree des marqueurs GPS pour les moyens aeriens publies par la carte FeuxDeForet. Active par defaut en beta, mais desactivable si le flux live n'est pas utile.
+- `Activer le suivi live avions et helicos`: cree des marqueurs GPS pour les moyens aeriens publies par la carte FeuxDeForet et complete avec un fallback ADS-B filtre sur les Canadair/Pelican, Dash/Milan et helicos Dragon. Active par defaut en beta, mais desactivable si le flux live n'est pas utile.
 
 ## Entites creees
 
@@ -60,7 +61,7 @@ Champs principaux :
 - `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible, avec un libelle temporel comme `+1h`.
 - `device_tracker.pyroveille_fire_*_satellite_zone`: zone satellite estimee FIRMS, affichee comme un cercle GPS quand des hotspots sont disponibles.
 - `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS en beta, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
-- `device_tracker.pyroveille_aircraft_*`: moyens aeriens live FeuxDeForet, si le suivi avions/helicos est active. Ces entites sont rafraichies toutes les 10 secondes. Les attributs exposent notamment `aircraft_type`, `callsign`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson`.
+- `device_tracker.pyroveille_aircraft_*`: moyens aeriens live, si le suivi avions/helicos est active. FeuxDeForet est rafraichi toutes les 10 secondes et le fallback ADS-B toutes les 60 secondes. Les attributs exposent notamment `aircraft_type`, `category_label`, `callsign`, `registration`, `source`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson`.
 
 ## Apercu
 

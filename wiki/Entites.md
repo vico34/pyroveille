@@ -50,7 +50,7 @@ Quand le suivi live avions et helicos est active, PyroVeille cree aussi des enti
 device_tracker.pyroveille_aircraft_<id>
 ```
 
-Ces entites representent les moyens aeriens publies par la carte FeuxDeForet. Elles sont rafraichies toutes les 10 secondes et exposent `aircraft_type`, `category_label`, `callsign`, `registration`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson` quand ces donnees sont disponibles.
+Ces entites representent les moyens aeriens publies par la carte FeuxDeForet, completes depuis `0.4.0-beta.10` par un fallback ADS-B filtre sur les moyens Securite Civile. FeuxDeForet est rafraichi toutes les 10 secondes et ADS-B toutes les 60 secondes. Les entites exposent `aircraft_type`, `category_label`, `callsign`, `registration`, `source`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson` quand ces donnees sont disponibles.
 
 ## Exemple de carte Lovelace
 
@@ -124,7 +124,8 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 - orange fonce : hotspot satellite FIRMS beta.
 - cercle orange transparent : zone satellite estimee FIRMS beta, si la carte affiche le cercle de precision GPS.
 - polygone orange transparent : zone satellite estimee FIRMS beta dans la carte custom PyroVeille.
-- bleu : avion de lutte incendie ou moyen aerien non classe.
+- bleu : Dash ou avion de lutte incendie non classe.
+- bleu clair : Canadair.
 - vert : helicoptere.
 
 ## Captures

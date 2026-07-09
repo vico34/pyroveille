@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0-beta.10
+
+- Ajout d'un fallback ADS-B via `api.adsb.lol` pour recuperer les moyens Securite Civile absents du flux FeuxDeForet.
+- Filtrage des Canadair/Pelican, Dash/Milan et helicos Dragon pour eviter d'afficher le trafic aerien general.
+- FeuxDeForet reste prioritaire en cas de doublon, avec ADS-B rafraichi toutes les 60 secondes.
+- Ajout des diagnostics `adsb_aircraft_count` et `adsb_aircraft_last_error`.
+- Differenciation visuelle des Canadair en bleu clair sur les marqueurs.
+
 ## 0.4.0-beta.9
 
 - Ajout d'un rafraichissement dedie aux avions/helicos toutes les 10 secondes.

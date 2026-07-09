@@ -21,13 +21,31 @@ from .util import distance_km
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-PyroVeille/0.4.0-beta.9"
+USER_AGENT = "HomeAssistant-PyroVeille/0.4.0-beta.10"
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 FIRMS_AREA_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 FEUXDEFORET_HOME_URL = "https://feuxdeforet.fr"
 FEUXDEFORET_AIRCRAFT_URL = "https://feuxdeforet.fr/fdf/tracker/aircraft"
+ADSB_LOL_RADIUS_URL = "https://api.adsb.lol/v2/lat/{latitude}/lon/{longitude}/dist/{radius}"
+FRENCH_CANADAIR_REGISTRATIONS = {
+    "F-ZBEO",
+    "F-ZBEG",
+    "F-ZBEU",
+    "F-ZBEZ",
+    "F-ZBFN",
+    "F-ZBFP",
+    "F-ZBFQ",
+    "F-ZBFS",
+    "F-ZBFV",
+    "F-ZBFW",
+    "F-ZBFX",
+    "F-ZBFY",
+    "F-ZBME",
+    "F-ZBMF",
+    "F-ZBMG",
+}
 
 
 class FeuxDeForetApiError(Exception):
@@ -236,6 +254,36 @@ class FeuxDeForetClient:
         aircraft = [self._normalize_aircraft(item) for item in items if isinstance(item, dict)]
         return [item for item in aircraft if item is not None]
 
+    async def async_get_adsb_firefighting_aircraft(
+        self,
+        latitude: float,
+        longitude: float,
+        radius_km: float,
+    ) -> list[AircraftPosition]:
+        """Fetch firefighting aircraft from an ADS-B public feed."""
+        radius = max(25, min(int(radius_km), 300))
+        url = ADSB_LOL_RADIUS_URL.format(
+            latitude=round(latitude, 4),
+            longitude=round(longitude, 4),
+            radius=radius,
+        )
+        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+        try:
+            async with self._session.get(url, headers=headers, timeout=20) as response:
+                if response.status >= 400:
+                    raise FeuxDeForetApiError(f"{url} returned HTTP {response.status}")
+                payload = await response.json(content_type=None)
+        except (ClientError, TimeoutError) as err:
+            raise FeuxDeForetApiError(f"Could not fetch {url}") from err
+
+        items = []
+        if isinstance(payload, dict):
+            raw_items = payload.get("ac") or payload.get("aircraft") or []
+            if isinstance(raw_items, list):
+                items = raw_items
+        aircraft = [self._normalize_adsb_aircraft(item) for item in items if isinstance(item, dict)]
+        return [item for item in aircraft if item is not None]
+
     async def _async_get_aircraft_payload(self) -> Any:
         """Request the aircraft tracker payload through the public feuxdeforet.fr proxy."""
         headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
@@ -338,6 +386,54 @@ class FeuxDeForetClient:
             vertical_rate=self._float(_first_value(last_position or item, "vertical_rate", "verticalRate")),
             squawk=self._string(_first_value(last_position or item, "squawk")),
             track=track,
+        )
+
+    def _normalize_adsb_aircraft(self, item: dict[str, Any]) -> AircraftPosition | None:
+        """Normalize one ADS-B aircraft object."""
+        latitude = self._float(item.get("lat"))
+        longitude = self._float(item.get("lon"))
+        if latitude is None or longitude is None:
+            return None
+
+        callsign = self._string(item.get("flight"))
+        if callsign:
+            callsign = callsign.replace(" ", "")
+        registration = self._string(item.get("r"))
+        if registration:
+            registration = registration.upper()
+        aircraft_type = self._string(item.get("t"))
+        category = _adsb_firefighting_category(callsign, registration, aircraft_type)
+        if category is None:
+            return None
+
+        aircraft_id = self._string(item.get("hex")) or registration or callsign
+        if not aircraft_id:
+            return None
+        altitude_m = None
+        altitude = item.get("alt_baro") or item.get("alt_geom")
+        if altitude not in (None, "ground"):
+            altitude_value = self._float(altitude)
+            altitude_m = round(altitude_value * 0.3048, 1) if altitude_value is not None else None
+
+        speed = self._float(item.get("gs"))
+        return AircraftPosition(
+            aircraft_id=f"adsb_{aircraft_id}",
+            latitude=latitude,
+            longitude=longitude,
+            category=category,
+            category_label={"dash": "Dash", "heli": "Helicoptere", "canadair": "Canadair"}.get(
+                category, "Aeronef"
+            ),
+            callsign=callsign,
+            registration=registration,
+            description=f"ADS-B {aircraft_type or category}",
+            status="en_vol" if altitude != "ground" else "sol",
+            heading=self._float(item.get("track")),
+            altitude_m=altitude_m,
+            speed_kmh=round(speed * 1.852, 1) if speed is not None else None,
+            squawk=self._string(item.get("squawk")),
+            track=[(latitude, longitude)],
+            source="adsb.lol",
         )
 
     @staticmethod
@@ -600,6 +696,24 @@ def _aircraft_category(raw_category: str | None) -> str:
     if any(key in text for key in ("dash", "q400")):
         return "dash"
     return "aircraft"
+
+
+def _adsb_firefighting_category(
+    callsign: str | None,
+    registration: str | None,
+    aircraft_type: str | None,
+) -> str | None:
+    """Return category for known firefighting aircraft in ADS-B data."""
+    clean_callsign = (callsign or "").replace(" ", "").upper()
+    clean_registration = (registration or "").upper()
+    clean_type = (aircraft_type or "").upper()
+    if clean_registration in FRENCH_CANADAIR_REGISTRATIONS or clean_callsign.startswith("PELICAN"):
+        return "canadair"
+    if clean_callsign.startswith("MILAN") or clean_type == "DH8D":
+        return "dash"
+    if clean_callsign.startswith("DRAG") or clean_callsign.startswith("DRAGON") or clean_type in {"EC45", "H145"}:
+        return "heli"
+    return None
 
 
 def _speed_kmh(data: dict[str, Any] | None, value: Any) -> float | None:
