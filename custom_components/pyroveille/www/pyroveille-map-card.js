@@ -127,8 +127,14 @@ class PyroVeilleMapCard extends HTMLElement {
     return 5;
   }
 
+  disconnectedCallback() {
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = undefined;
+  }
+
   async _ensureLeaflet() {
-    if (window.L) {
+    if (window.__pyroVeilleL) {
+      this._L = window.__pyroVeilleL;
       return;
     }
     if (!window.pyroVeilleLeafletPromise) {
@@ -136,32 +142,42 @@ class PyroVeilleMapCard extends HTMLElement {
         const script = document.createElement("script");
         script.src = LEAFLET_JS;
         script.async = true;
-        script.onload = resolve;
+        script.onload = () => {
+          const loadedLeaflet = window.L;
+          if (loadedLeaflet && typeof loadedLeaflet.noConflict === "function") {
+            loadedLeaflet.noConflict();
+          }
+          window.__pyroVeilleL = loadedLeaflet;
+          resolve(loadedLeaflet);
+        };
         script.onerror = () => reject(new Error(`Impossible de charger ${LEAFLET_JS}`));
         document.head.appendChild(script);
       });
     }
-    await window.pyroVeilleLeafletPromise;
-    if (!window.L) {
+    this._L = await window.pyroVeilleLeafletPromise;
+    if (!this._L) {
       throw new Error("Leaflet n'est pas disponible apres chargement.");
     }
   }
 
   _renderMap() {
-    if (!this._hass || !window.L || !this.mapElement) {
+    if (!this._hass || !this._L || !this.mapElement) {
       return;
     }
     if (!this.map) {
-      this.map = window.L.map(this.mapElement, {
+      this.map = this._L.map(this.mapElement, {
         zoomControl: true,
         attributionControl: true,
       });
-      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      this.map.setView([46.5, 2.5], 5);
+      this._L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "&copy; OpenStreetMap",
       }).addTo(this.map);
-      this.layers = window.L.layerGroup().addTo(this.map);
+      this.layers = this._L.layerGroup().addTo(this.map);
+      this._observeMapSize();
       setTimeout(() => this.map.invalidateSize(), 0);
+      setTimeout(() => this.map.invalidateSize(), 300);
     }
 
     this.mapElement.querySelector(".empty")?.remove();
@@ -214,10 +230,23 @@ class PyroVeilleMapCard extends HTMLElement {
   }
 
   _showError(error) {
+    console.error("[PyroVeilleMapCard] render error:", error);
     if (!this.mapElement) {
       return;
     }
     this.mapElement.innerHTML = `<div class="empty">Carte PyroVeille indisponible : ${error.message}</div>`;
+  }
+
+  _observeMapSize() {
+    if (this._resizeObserver || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    this._resizeObserver = new ResizeObserver(() => {
+      if (this.map) {
+        this.map.invalidateSize();
+      }
+    });
+    this._resizeObserver.observe(this.mapElement);
   }
 
   _pyroVeilleEntities() {
@@ -287,7 +316,7 @@ class PyroVeilleMapCard extends HTMLElement {
       return;
     }
     drawnZones?.add(key);
-    const layer = window.L.geoJSON(geojson, {
+    const layer = this._L.geoJSON(geojson, {
       style: {
         color: "#d84315",
         weight: 2,
@@ -309,7 +338,7 @@ class PyroVeilleMapCard extends HTMLElement {
       return;
     }
     const color = this._aircraftColor(attrs);
-    const layer = window.L.geoJSON(geojson, {
+    const layer = this._L.geoJSON(geojson, {
       style: {
         color,
         weight: 3,
@@ -329,13 +358,13 @@ class PyroVeilleMapCard extends HTMLElement {
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       return;
     }
-    const icon = window.L.divIcon({
+    const icon = this._L.divIcon({
       className: "",
       html: `<div class="marker ${markerClass}">${label}</div>`,
       iconSize: [36, 36],
       iconAnchor: [18, 18],
     });
-    const marker = window.L.marker([latitude, longitude], { icon }).addTo(this.layers);
+    const marker = this._L.marker([latitude, longitude], { icon }).addTo(this.layers);
     marker.bindPopup(this._popupContent(state));
     bounds.push([latitude, longitude]);
   }
@@ -350,13 +379,13 @@ class PyroVeilleMapCard extends HTMLElement {
     const category = attrs.aircraft_type || attrs.category;
     const markerType = category === "heli" ? "heli" : category === "canadair" ? "canadair" : "";
     const label = this._escapeHtml(attrs.callsign || attrs.registration || attrs.aircraft_id || "A");
-    const icon = window.L.divIcon({
+    const icon = this._L.divIcon({
       className: "",
       html: `<div class="marker aircraft ${markerType}"><div class="arrow" style="transform: rotate(${heading}deg)"></div><div class="label">${label}</div></div>`,
       iconSize: [38, 46],
       iconAnchor: [19, 19],
     });
-    const marker = window.L.marker([latitude, longitude], { icon }).addTo(this.layers);
+    const marker = this._L.marker([latitude, longitude], { icon }).addTo(this.layers);
     marker.bindPopup(this._popupContent(state));
     bounds.push([latitude, longitude]);
   }
