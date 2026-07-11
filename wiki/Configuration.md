@@ -13,7 +13,7 @@ L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les co
 ## Filtres
 
 - `Departements a inclure`: optionnel, valeurs separees par des virgules, par exemple `13, 83, 34`.
-- `Limiter aux feux en cours`: ignore les signalements non actifs.
+- `Limiter aux feux en cours`: ignore les signalements clotures/inactifs. Les feux signales en jaune sur FeuxDeForet restent inclus pour permettre une alerte precoce.
 
 ## Notifications et geocodage
 

@@ -12,10 +12,10 @@ Si PyroVeille vous est utile, vous pouvez soutenir le projet via Buy Me a Coffee
 
 ## Fonctionnalites
 
-- Recuperation des signalements recents via la route publique `https://feuxdeforet.fr/api/signalements/recent`.
+- Recuperation des signalements recents via `https://feuxdeforet.fr/api/signalements/recent` et des feux cartographiques via `https://feuxdeforet.fr/fdf/cartographie/geojson?scope=web`.
 - Selection d'une zone par adresse et rayon en kilometres.
 - Filtre optionnel par departements.
-- Filtre optionnel sur les feux en cours uniquement.
+- Filtre optionnel sur les feux courants uniquement : feux actifs et signalements jaunes conserves, feux clotures ignores.
 - Notification persistante Home Assistant lorsqu'un nouvel incendie entre dans le perimetre.
 - Notification Telegram optionnelle via un service legacy `notify.telegram` ou une entite `notify.*` existante dans Home Assistant.
 - Evenement Home Assistant `pyroveille_nearby_fire` pour declencher vos propres automatisations.
@@ -40,7 +40,7 @@ Champs principaux :
 - `Adresse du centre`: adresse utilisee comme centre de la zone surveillee.
 - `Rayon`: perimetre de surveillance en kilometres.
 - `Departements a inclure`: optionnel, separes par virgules, exemple `13, 83, 34`.
-- `Limiter aux feux en cours`: ignore les signalements qui ne sont plus actifs.
+- `Limiter aux feux en cours`: ignore les signalements clotures/inactifs. Les feux signales en jaune restent inclus pour permettre une alerte precoce.
 - `Creer une notification persistante`: cree une notification Home Assistant sur nouvel incendie proche.
 - `Notifier seulement sous cette distance`: seuil optionnel en kilometres. `0` desactive le seuil.
 - `Inclure le lien feuxdeforet.fr`: ajoute ou retire le lien source dans les notifications.
@@ -84,7 +84,7 @@ entities:
   - entity: device_tracker.nom_de_l_incendie_pyroveille
 ```
 
-Les noms exacts des entites sont visibles dans `Parametres > Appareils et services > Entites`, en filtrant sur `PyroVeille`. Les marqueurs PyroVeille sont rouges pour les feux actifs et gris pour les feux inactifs.
+Les noms exacts des entites sont visibles dans `Parametres > Appareils et services > Entites`, en filtrant sur `PyroVeille`. Les marqueurs PyroVeille sont rouges pour les feux actifs, jaunes pour les feux signales/probables/douteux et gris pour les feux inactifs.
 
 Pour afficher automatiquement toutes les entites `device_tracker.pyroveille_*`, installez la carte custom `auto-entities` via HACS :
 
@@ -194,6 +194,6 @@ action:
 
 ## Notes sur la source
 
-Feux de Foret expose sur son site public une carte "Feux en cours" et une route JSON publique utilisee par le frontend. Au 6 juillet 2026, la route `https://feuxdeforet.fr/api/signalements/recent` renvoie notamment `id`, `title`, `commune`, `dept`, `url`, `dateIso`, `enCours` et `thumbnail`. Si des coordonnees sont ajoutees par la source, l'integration les utilisera directement.
+Feux de Foret expose sur son site public une carte "Feux en cours" et des routes JSON publiques utilisees par le frontend. PyroVeille combine `https://feuxdeforet.fr/api/signalements/recent` pour les informations lisibles et `https://feuxdeforet.fr/fdf/cartographie/geojson?scope=web` pour les coordonnees et statuts de carte. Les statuts cartographiques `signale`, `probable`, `douteux` et `en_attente` sont normalises en `reported` et affiches en jaune.
 
 L'adresse de surveillance et les communes sans coordonnees natives sont geocodees via Nominatim/OpenStreetMap. Lorsque les coordonnees ne sont pas publiees dans cette route, le placement carte est approximatif et base sur la commune. Les notifications doivent donc etre considerees comme une aide de surveillance, pas comme une source officielle d'alerte securite.

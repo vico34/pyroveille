@@ -119,6 +119,7 @@ La carte utilise OpenStreetMap/Leaflet et lit automatiquement les entites `devic
 PyroVeille expose une image de marqueur differente selon le statut du feu :
 
 - rouge : feu actif ;
+- jaune : feu signale, probable, douteux ou en attente sur la carte FeuxDeForet ;
 - gris : feu inactif ou termine ;
 - orange : point de projection automatique, avec libelle temporel de progression.
 - orange fonce : hotspot satellite FIRMS beta.
@@ -136,7 +137,8 @@ PyroVeille expose une image de marqueur differente selon le statut du feu :
 
 Chaque entite `device_tracker` contient aussi :
 
-- `fire_status`: `active` ou `inactive` ;
+- `fire_status`: `active`, `reported` ou `inactive` ;
+- `status`: meme statut normalise que `fire_status` dans les attributs serialises ;
 - `marker_color`: couleur HTML du marqueur.
 - `bearing`: direction estimee de projection en degres pour les marqueurs de projection ;
 - `projection_label`: libelle temporel affiche sur les marqueurs de projection.

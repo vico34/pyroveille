@@ -57,6 +57,7 @@ class PyroVeilleMapCard extends HTMLElement {
           box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
         }
         .marker.fire { background: #e53935; }
+        .marker.reported { background: #fbc02d; color: #263238; border-color: #ffffff; }
         .marker.inactive { background: #757575; }
         .marker.hotspot {
           width: 18px;
@@ -205,7 +206,7 @@ class PyroVeilleMapCard extends HTMLElement {
         this._drawAircraftTrack(attrs, bounds);
         this._drawAircraftMarker(attrs, bounds, state);
       } else if (this._isFire(entityId, attrs)) {
-        this._drawMarker(attrs, bounds, attrs.fire_status === "inactive" ? "inactive" : "fire", "F", state);
+        this._drawMarker(attrs, bounds, this._fireMarkerClass(attrs), "F", state);
         if (this.config.show_satellite_zones && attrs.satellite_zone?.geojson) {
           this._drawGeoJson(attrs.satellite_zone.geojson, bounds, drawnZones);
         }
@@ -399,6 +400,16 @@ class PyroVeilleMapCard extends HTMLElement {
       return "#039be5";
     }
     return "#1976d2";
+  }
+
+  _fireMarkerClass(attrs) {
+    if (attrs.fire_status === "inactive") {
+      return "inactive";
+    }
+    if (attrs.fire_status === "reported") {
+      return "reported";
+    }
+    return "fire";
   }
 
   _number(value) {

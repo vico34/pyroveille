@@ -18,6 +18,7 @@ from .models import AircraftPosition, FireAlert, FireHotspot, FireProjection
 from .util import destination_point
 
 _ACTIVE_FIRE_COLOR = "#e53935"
+_REPORTED_FIRE_COLOR = "#fbc02d"
 _INACTIVE_FIRE_COLOR = "#757575"
 _PROJECTION_COLOR = "#fb8c00"
 _HOTSPOT_COLOR = "#d84315"
@@ -156,10 +157,11 @@ class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):
         alert = self._alert
         if not alert:
             return {"id": self._alert_id, "active": False, "fire_status": "unknown"}
+        marker_color = _fire_marker_color(alert)
         return {
             **alert.as_dict(),
-            "fire_status": "active" if alert.active else "inactive",
-            "marker_color": _ACTIVE_FIRE_COLOR if alert.active else _INACTIVE_FIRE_COLOR,
+            "fire_status": alert.status,
+            "marker_color": marker_color,
             "satellite_zone": self.coordinator.satellite_zone_for_alert(alert.id),
         }
 
@@ -169,10 +171,11 @@ class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):
         alert = self._alert
         if alert is None:
             return None
-        color = _ACTIVE_FIRE_COLOR if alert.active else _INACTIVE_FIRE_COLOR
+        color = _fire_marker_color(alert)
+        glyph_color = "#263238" if alert.status == "reported" else "#ffffff"
         svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <circle cx="32" cy="32" r="30" fill="{color}"/>
-<path fill="#ffffff" d="M34.8 6.6c-6.5 5.8-9 12.1-7.4 18.8.8 3.1-.6 6.1-3.6 7.7-2.4 1.3-5.2.8-7.1-1.2-4.1 5-6.1 10.1-6.1 15.1 0 8.2 6.4 14.2 21.4 14.2s21.4-6 21.4-14.2c0-7.4-5.1-13.8-10.8-19.6.2 3.8-1.4 6.8-4.6 8.6-1.7.9-3.9-.4-3.7-2.4.8-8.3-7-12.2.5-27z"/>
+<path fill="{glyph_color}" d="M34.8 6.6c-6.5 5.8-9 12.1-7.4 18.8.8 3.1-.6 6.1-3.6 7.7-2.4 1.3-5.2.8-7.1-1.2-4.1 5-6.1 10.1-6.1 15.1 0 8.2 6.4 14.2 21.4 14.2s21.4-6 21.4-14.2c0-7.4-5.1-13.8-10.8-19.6.2 3.8-1.4 6.8-4.6 8.6-1.7.9-3.9-.4-3.7-2.4.8-8.3-7-12.2.5-27z"/>
 <path fill="{color}" d="M32 29l8 18h-5v10h-6V47h-5l8-18z"/>
 </svg>"""
         return f"data:image/svg+xml;utf8,{quote(svg)}"
@@ -543,3 +546,12 @@ def _aircraft_marker_color(aircraft: AircraftPosition) -> str:
     if aircraft.category == "canadair":
         return _CANADAIR_COLOR
     return _AIRCRAFT_COLOR
+
+
+def _fire_marker_color(alert: FireAlert) -> str:
+    """Return marker color for one fire status."""
+    if alert.status == "reported":
+        return _REPORTED_FIRE_COLOR
+    if alert.status == "inactive":
+        return _INACTIVE_FIRE_COLOR
+    return _ACTIVE_FIRE_COLOR

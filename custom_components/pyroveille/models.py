@@ -17,6 +17,7 @@ class FireAlert:
     url: str | None
     date: datetime | None
     active: bool
+    status: str
     thumbnail: str | None
     latitude: float | None = None
     longitude: float | None = None
@@ -44,6 +45,7 @@ class FireAlert:
             "url": self.url,
             "date": self.date.isoformat() if self.date else None,
             "active": self.active,
+            "status": self.status,
             "thumbnail": self.thumbnail,
             "latitude": self.latitude,
             "longitude": self.longitude,

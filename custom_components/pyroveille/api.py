@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import csv
+import unicodedata
 from datetime import datetime
 from io import StringIO
 from math import atan2, cos, degrees, radians, sin
@@ -21,12 +22,13 @@ from .util import distance_km
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-PyroVeille/0.4.0-beta.10"
+USER_AGENT = "HomeAssistant-PyroVeille/0.4.0-beta.11"
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 FIRMS_AREA_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 FEUXDEFORET_HOME_URL = "https://feuxdeforet.fr"
+FEUXDEFORET_CARTOGRAPHY_URL = "https://feuxdeforet.fr/fdf/cartographie/geojson?scope=web"
 FEUXDEFORET_AIRCRAFT_URL = "https://feuxdeforet.fr/fdf/tracker/aircraft"
 ADSB_LOL_RADIUS_URL = "https://api.adsb.lol/v2/lat/{latitude}/lon/{longitude}/dist/{radius}"
 FRENCH_CANADAIR_REGISTRATIONS = {
@@ -74,11 +76,55 @@ class FeuxDeForetClient:
         per = max(1, min(max_items, 100))
         payload = await self._request_json(f"/signalements/recent?per={per}")
         items = payload.get("signalements") or payload.get("feux") or []
-        alerts = [self._normalize_fire(item) for item in items if isinstance(item, dict)]
+        alerts_by_id = {
+            alert.id: alert for alert in (self._normalize_fire(item) for item in items if isinstance(item, dict))
+        }
+        for alert in await self._async_get_cartography_fires():
+            existing = alerts_by_id.get(alert.id)
+            if existing is None:
+                alerts_by_id[alert.id] = alert
+                continue
+            alerts_by_id[alert.id] = FireAlert(
+                **{
+                    **existing.as_dict(),
+                    "date": existing.date,
+                    "active": alert.active,
+                    "status": alert.status,
+                    "latitude": existing.latitude if existing.has_location else alert.latitude,
+                    "longitude": existing.longitude if existing.has_location else alert.longitude,
+                    "source": alert.source,
+                }
+            )
+        alerts = list(alerts_by_id.values())
 
         if self._geocode_missing:
             alerts = [await self._async_geocode_alert(alert) for alert in alerts]
 
+        return alerts
+
+    async def _async_get_cartography_fires(self) -> list[FireAlert]:
+        """Fetch fire points from the public map GeoJSON feed."""
+        headers = {"Accept": "application/geo+json, application/json", "User-Agent": USER_AGENT}
+        try:
+            async with self._session.get(FEUXDEFORET_CARTOGRAPHY_URL, headers=headers, timeout=20) as response:
+                if response.status >= 400:
+                    _LOGGER.debug("FeuxDeForet cartography returned HTTP %s", response.status)
+                    return []
+                data = await response.json(content_type=None)
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.debug("Could not fetch FeuxDeForet cartography GeoJSON: %s", err)
+            return []
+
+        geojson = data.get("data") if isinstance(data, dict) and isinstance(data.get("data"), dict) else data
+        features = geojson.get("features") if isinstance(geojson, dict) else None
+        if not isinstance(features, list):
+            return []
+        alerts = []
+        for feature in features:
+            if isinstance(feature, dict):
+                alert = self._normalize_cartography_feature(feature)
+                if alert is not None:
+                    alerts.append(alert)
         return alerts
 
     async def _request_json(self, path: str) -> dict[str, Any]:
@@ -114,6 +160,7 @@ class FeuxDeForetClient:
             or position.get("lon")
         )
 
+        status = self._fire_status(item)
         return FireAlert(
             id=str(item.get("id") or item.get("slug") or item.get("url") or item.get("title")),
             title=self._string(item.get("title")) or "Incendie",
@@ -121,10 +168,51 @@ class FeuxDeForetClient:
             department=self._string(item.get("dept") or item.get("department")),
             url=urljoin(DEFAULT_FEUXDEFORET_BASE_URL, raw_url) if raw_url else None,
             date=self._parse_datetime(item.get("dateIso") or item.get("date")),
-            active=bool(item.get("enCours", item.get("active", True))),
+            active=status != "inactive",
+            status=status,
             thumbnail=urljoin(DEFAULT_FEUXDEFORET_BASE_URL, raw_thumbnail) if raw_thumbnail else None,
             latitude=latitude,
             longitude=longitude,
+        )
+
+    def _normalize_cartography_feature(self, feature: dict[str, Any]) -> FireAlert | None:
+        """Normalize one GeoJSON map feature from feuxdeforet.fr."""
+        geometry = feature.get("geometry")
+        properties = feature.get("properties")
+        if not isinstance(geometry, dict) or not isinstance(properties, dict):
+            return None
+        if geometry.get("type") != "Point":
+            return None
+        coordinates = geometry.get("coordinates")
+        if not isinstance(coordinates, list) or len(coordinates) < 2:
+            return None
+        longitude = self._float(coordinates[0])
+        latitude = self._float(coordinates[1])
+        if latitude is None or longitude is None:
+            return None
+        alert_id = self._string(feature.get("id") or properties.get("id"))
+        if not alert_id:
+            return None
+        raw_url = self._string(properties.get("url") or properties.get("link"))
+        commune, department = _location_from_url(raw_url)
+        status = self._fire_status(properties)
+        title = self._string(properties.get("title") or properties.get("name"))
+        if not title:
+            label = "Feu signale" if status == "reported" else "Incendie"
+            title = f"{label} {commune or alert_id}".strip()
+        return FireAlert(
+            id=alert_id,
+            title=title,
+            commune=self._string(properties.get("commune") or properties.get("city")) or commune,
+            department=self._string(properties.get("dept") or properties.get("department")) or department,
+            url=urljoin(DEFAULT_FEUXDEFORET_BASE_URL, raw_url) if raw_url else None,
+            date=self._parse_datetime(properties.get("dateIso") or properties.get("date") or properties.get("created_at")),
+            active=status != "inactive",
+            status=status,
+            thumbnail=None,
+            latitude=latitude,
+            longitude=longitude,
+            source="feuxdeforet.fr/carte",
         )
 
     async def _async_geocode_alert(self, alert: FireAlert) -> FireAlert:
@@ -460,6 +548,33 @@ class FeuxDeForetClient:
         except ValueError:
             return None
 
+    @classmethod
+    def _fire_status(cls, item: dict[str, Any]) -> str:
+        """Return normalized fire status for API and map payloads."""
+        raw_status = cls._normalize_text(
+            _first_value(item, "statut", "status", "etat", "state", "type_status")
+        )
+        raw_state = cls._normalize_text(_first_value(item, "etat_feu", "etat", "fire_state"))
+        if raw_status in {"cloture", "masque", "fausse_alerte", "inactive", "inactif", "closed"}:
+            return "inactive"
+        if raw_state in {"eteint", "extinguished", "inactive", "inactif"}:
+            return "inactive"
+        if raw_status in {"signale", "signalee", "probable", "douteux", "en_attente", "pending", "reported"}:
+            return "reported"
+        active_value = item.get("enCours", item.get("active"))
+        if active_value is False or cls._normalize_text(active_value) in {"false", "0", "non", "no"}:
+            return "inactive"
+        return "active"
+
+    @staticmethod
+    def _normalize_text(value: Any) -> str:
+        """Normalize text for tolerant status matching."""
+        if value is None:
+            return ""
+        text = unicodedata.normalize("NFD", str(value).lower().strip())
+        text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+        return text.replace("-", "_").replace(" ", "_")
+
 
 async def async_geocode_address(
     hass: HomeAssistant,
@@ -586,6 +701,22 @@ def _geocode_queries(query: str) -> list[str]:
         queries.append(f"{postcode} {city}")
         queries.append(city)
     return list(dict.fromkeys(queries))
+
+
+def _location_from_url(url: str | None) -> tuple[str | None, str | None]:
+    """Extract approximate commune and department from a feuxdeforet.fr article URL."""
+    if not url:
+        return None, None
+    parts = [part for part in str(url).strip("/").split("/") if part]
+    if len(parts) < 2:
+        return None, None
+    department_match = re.search(r"-(\d{2,3}[ab]?)$", parts[-2], re.IGNORECASE)
+    fire_slug = parts[-1]
+    commune = None
+    if match := re.match(r"(.+)-\d{2}-\d{2}-\d{4}-\d+$", fire_slug):
+        commune = match.group(1).replace("-", " ").title()
+    department = department_match.group(1).upper() if department_match else None
+    return commune, department
 
 
 def _bbox_around(latitude: float, longitude: float, radius_km: float) -> tuple[float, float, float, float]:

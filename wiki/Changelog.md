@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-beta.11
+
+- Ajout du flux cartographique `fdf/cartographie/geojson?scope=web` en complement de `signalements/recent`.
+- Prise en charge des feux signales en jaune sur FeuxDeForet (`signale`, `probable`, `douteux`, `en_attente`) avec `fire_status: reported`.
+- Affichage des marqueurs jaunes dans les entites GPS et dans `custom:pyroveille-map-card`.
+- Le filtre `Limiter aux feux en cours` conserve les feux signales et exclut seulement les feux inactifs/clotures.
+
 ## 0.4.0-beta.10
 
 - Ajout d'un fallback ADS-B via `api.adsb.lol` pour recuperer les moyens Securite Civile absents du flux FeuxDeForet.
