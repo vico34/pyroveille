@@ -63,6 +63,8 @@ Champs principaux :
 - `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS en beta, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
 - `device_tracker.pyroveille_aircraft_*`: moyens aeriens live, si le suivi avions/helicos est active. FeuxDeForet est rafraichi toutes les 10 secondes et le fallback ADS-B toutes les 60 secondes. Les attributs exposent notamment `aircraft_type`, `category_label`, `callsign`, `registration`, `source`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson`.
 
+Les entites carte qui ne sont plus fournies par les sources deviennent indisponibles, puis sont automatiquement supprimees du registre Home Assistant apres 24 heures par defaut. La duree peut etre reglee entre 1 et 720 heures avec l'option `Supprimer les entites absentes apres`.
+
 ## Apercu
 
 ![Capteurs PyroVeille](images/pyroveille-info.png)

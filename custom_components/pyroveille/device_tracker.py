@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from urllib.parse import quote
 
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
-from .const import DOMAIN
+from .const import CONF_ENTITY_RETENTION_HOURS, DEFAULT_ENTITY_RETENTION_HOURS, DOMAIN
 from .coordinator import FeuxDeForetDataCoordinator
 from .entity import FeuxDeForetEntity
 from .models import AircraftPosition, FireAlert, FireHotspot, FireProjection
@@ -69,46 +72,120 @@ class FireTrackerPlatform:
         """Initialize platform helper."""
         self._coordinator = coordinator
         self._async_add_entities = async_add_entities
-        self._known_ids: set[str] = set()
-        self._known_projection_ids: set[tuple[str, float]] = set()
-        self._known_hotspot_ids: set[str] = set()
-        self._known_satellite_zone_ids: set[str] = set()
-        self._known_aircraft_ids: set[str] = set()
+        self._known_unique_ids: set[str] = set()
+        self._missing_since: dict[str, datetime] = {}
 
     def async_update_entities(self) -> None:
-        """Add trackers for newly discovered nearby fires."""
+        """Add current trackers and purge entities that have remained absent."""
         new_entities = []
+        desired_unique_ids: set[str] = set()
         for alert in self._coordinator.nearby_alerts:
-            if alert.has_location and alert.id not in self._known_ids:
-                self._known_ids.add(alert.id)
+            fire_unique_id = self._unique_id(f"fire_{alert.id}")
+            if alert.has_location:
+                desired_unique_ids.add(fire_unique_id)
+            if alert.has_location and fire_unique_id not in self._known_unique_ids:
+                self._known_unique_ids.add(fire_unique_id)
                 new_entities.append(FireTrackerEntity(self._coordinator, alert.id))
 
             if alert.has_location and self._coordinator.projection_for_alert(alert) is not None:
                 for step in _PROJECTION_STEPS:
-                    projection_id = (alert.id, step)
-                    if projection_id in self._known_projection_ids:
+                    projection_unique_id = self._unique_id(
+                        f"fire_{alert.id}_projection_{int(step * 100)}"
+                    )
+                    desired_unique_ids.add(projection_unique_id)
+                    if projection_unique_id in self._known_unique_ids:
                         continue
-                    self._known_projection_ids.add(projection_id)
+                    self._known_unique_ids.add(projection_unique_id)
                     new_entities.append(FireProjectionTrackerEntity(self._coordinator, alert.id, step))
 
             if self._coordinator.satellite_zone_for_alert(alert.id) is not None:
-                if alert.id not in self._known_satellite_zone_ids:
-                    self._known_satellite_zone_ids.add(alert.id)
+                zone_unique_id = self._unique_id(f"fire_{alert.id}_satellite_zone")
+                desired_unique_ids.add(zone_unique_id)
+                if zone_unique_id not in self._known_unique_ids:
+                    self._known_unique_ids.add(zone_unique_id)
                     new_entities.append(FireSatelliteZoneTrackerEntity(self._coordinator, alert.id))
 
             for hotspot in self._coordinator.fire_hotspots.get(alert.id, []):
-                if hotspot.hotspot_id in self._known_hotspot_ids:
+                hotspot_unique_id = self._unique_id(f"hotspot_{hotspot.hotspot_id}")
+                desired_unique_ids.add(hotspot_unique_id)
+                if hotspot_unique_id in self._known_unique_ids:
                     continue
-                self._known_hotspot_ids.add(hotspot.hotspot_id)
+                self._known_unique_ids.add(hotspot_unique_id)
                 new_entities.append(FireHotspotTrackerEntity(self._coordinator, hotspot.hotspot_id))
 
         for aircraft in self._coordinator.aircraft_positions.values():
-            if aircraft.aircraft_id in self._known_aircraft_ids:
+            aircraft_unique_id = self._unique_id(f"aircraft_{aircraft.aircraft_id}")
+            desired_unique_ids.add(aircraft_unique_id)
+            if aircraft_unique_id in self._known_unique_ids:
                 continue
-            self._known_aircraft_ids.add(aircraft.aircraft_id)
+            self._known_unique_ids.add(aircraft_unique_id)
             new_entities.append(AircraftTrackerEntity(self._coordinator, aircraft.aircraft_id))
         if new_entities:
             self._async_add_entities(new_entities)
+        self._async_purge_stale_entities(desired_unique_ids)
+
+    def _unique_id(self, suffix: str) -> str:
+        """Return a dynamic tracker unique ID for this config entry."""
+        return f"{self._coordinator.config_entry.entry_id}_{suffix}"
+
+    def _async_purge_stale_entities(self, desired_unique_ids: set[str]) -> None:
+        """Remove dynamic tracker registry entries absent beyond retention."""
+        now = dt_util.utcnow()
+        retention = timedelta(hours=self._entity_retention_hours)
+        registry = er.async_get(self._coordinator.hass)
+        entries = er.async_entries_for_config_entry(
+            registry, self._coordinator.config_entry.entry_id
+        )
+
+        registered_unique_ids = {
+            entry.unique_id
+            for entry in entries
+            if entry.domain == "device_tracker" and self._is_dynamic_unique_id(entry.unique_id)
+        }
+        for unique_id in registered_unique_ids:
+            if unique_id in desired_unique_ids:
+                self._missing_since.pop(unique_id, None)
+                continue
+
+            missing_since = self._missing_since.setdefault(unique_id, now)
+            if now - missing_since < retention:
+                continue
+
+            entity_id = registry.async_get_entity_id("device_tracker", DOMAIN, unique_id)
+            if entity_id is not None:
+                registry.async_remove(entity_id)
+            self._known_unique_ids.discard(unique_id)
+            self._missing_since.pop(unique_id, None)
+
+        for unique_id in tuple(self._missing_since):
+            if unique_id not in registered_unique_ids:
+                self._missing_since.pop(unique_id, None)
+
+    @property
+    def _entity_retention_hours(self) -> float:
+        """Return configured stale entity retention."""
+        config = {
+            **self._coordinator.config_entry.data,
+            **self._coordinator.config_entry.options,
+        }
+        try:
+            return max(
+                1.0,
+                float(config.get(CONF_ENTITY_RETENTION_HOURS, DEFAULT_ENTITY_RETENTION_HOURS)),
+            )
+        except (TypeError, ValueError):
+            return DEFAULT_ENTITY_RETENTION_HOURS
+
+    def _is_dynamic_unique_id(self, unique_id: str) -> bool:
+        """Return whether a registry entry is a PyroVeille dynamic tracker."""
+        prefix = f"{self._coordinator.config_entry.entry_id}_"
+        return unique_id.startswith(
+            (
+                f"{prefix}fire_",
+                f"{prefix}hotspot_",
+                f"{prefix}aircraft_",
+            )
+        )
 
 
 class FireTrackerEntity(FeuxDeForetEntity, TrackerEntity):

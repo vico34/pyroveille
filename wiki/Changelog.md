@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.12
+
+- Suppression automatique des entites carte qui restent absentes des sources.
+- Ajout de l'option `Supprimer les entites absentes apres`, configurable de 1 a 720 heures (24 heures par defaut).
+- Nettoyage concerne les incendies, projections, zones satellite, hotspots et aeronefs.
+
 ## 0.4.0-beta.11
 
 - Ajout du flux cartographique `fdf/cartographie/geojson?scope=web` en complement de `signalements/recent`.

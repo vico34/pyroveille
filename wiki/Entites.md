@@ -2,6 +2,10 @@
 
 PyroVeille cree les entites suivantes.
 
+## Suppression automatique
+
+Les entites carte absentes des flux deviennent d'abord indisponibles. Si elles ne reapparaissent pas pendant le delai configure, PyroVeille les retire automatiquement du registre d'entites Home Assistant afin d'eviter leur accumulation. Le delai par defaut est de 24 heures et peut etre modifie dans les options avec `Supprimer les entites absentes apres` (1 a 720 heures).
+
 ## Capteurs
 
 - `binary_sensor.alerte_incendie_proche`: actif si au moins un incendie est dans la zone.
