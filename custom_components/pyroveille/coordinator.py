@@ -36,7 +36,6 @@ from .const import (
     CONF_TELEGRAM_NOTIFY_SERVICE,
     DEFAULT_API_BASE_URL,
     DEFAULT_ADSB_AIRCRAFT_SCAN_INTERVAL,
-    DEFAULT_ADSB_SEARCH_RADIUS_KM,
     DEFAULT_AIRCRAFT_SCAN_INTERVAL,
     DEFAULT_AUTO_PROJECTION_HORIZON_HOURS,
     DEFAULT_AUTO_PROJECTION_UNCERTAINTY_KM,
@@ -404,10 +403,15 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
             self.last_aircraft_tracking_error = str(err)
         else:
             self.last_aircraft_tracking_error = None
-        self.aircraft_positions = _merge_aircraft_positions(
+        merged_aircraft = _merge_aircraft_positions(
             list(self.adsb_aircraft_positions.values()),
             feuxdeforet_aircraft,
         )
+        self.aircraft_positions = {
+            aircraft_id: aircraft
+            for aircraft_id, aircraft in merged_aircraft.items()
+            if self._aircraft_is_in_scope(aircraft)
+        }
 
     async def _async_update_adsb_aircraft_positions_if_due(self) -> None:
         """Fetch ADS-B firefighting aircraft on a slower cadence."""
@@ -418,19 +422,34 @@ class FeuxDeForetDataCoordinator(DataUpdateCoordinator[list[FireAlert]]):
         ):
             return
         self._last_adsb_aircraft_update = now
-        radius_km = max(self.radius_km, DEFAULT_ADSB_SEARCH_RADIUS_KM)
         try:
             aircraft = await self.client.async_get_adsb_firefighting_aircraft(
                 self.center_latitude,
                 self.center_longitude,
-                radius_km,
+                self.radius_km,
             )
         except FeuxDeForetApiError as err:
             _LOGGER.debug("Could not fetch ADS-B aircraft positions: %s", err)
             self.last_adsb_aircraft_error = str(err)
             return
-        self.adsb_aircraft_positions = {item.aircraft_id: item for item in aircraft}
+        self.adsb_aircraft_positions = {
+            item.aircraft_id: item
+            for item in aircraft
+            if self._aircraft_is_in_scope(item)
+        }
         self.last_adsb_aircraft_error = None
+
+    def _aircraft_is_in_scope(self, aircraft: AircraftPosition) -> bool:
+        """Return whether an aircraft is inside the configured monitoring radius."""
+        return (
+            distance_km(
+                self.center_latitude,
+                self.center_longitude,
+                aircraft.latitude,
+                aircraft.longitude,
+            )
+            <= self.radius_km
+        )
 
     def satellite_zone_for_alert(self, alert_id: str) -> dict[str, object] | None:
         """Return estimated satellite zone details for an alert."""

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- Filtrage des aeronefs FeuxDeForet et ADS-B selon le `Rayon` configure.
+- Suppression de la recherche ADS-B forcee a 300 km.
+- Les aeronefs sortis de la zone disparaissent de la carte puis suivent le delai de nettoyage automatique des entites.
+
 ## 0.4.0
 
 - Passage en stable de la carte PyroVeille avec zones satellite FIRMS, projections et suivi des moyens aeriens.
