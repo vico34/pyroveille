@@ -25,7 +25,7 @@ L'adresse est geocodee au moment de l'enregistrement. PyroVeille conserve les co
 - `Geocoder les communes sans coordonnees natives`: place approximativement les signalements sur la carte quand la source ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
 - `Activer les zones satellite FIRMS`: active la recuperation beta de hotspots satellite NASA FIRMS autour des incendies.
-- `Activer le suivi live avions et helicos`: cree des entites carte pour les avions et helicos visibles sur la carte FeuxDeForet. Active par defaut en beta, mais desactivable.
+- `Activer le suivi live avions et helicos`: cree des entites carte pour les avions et helicos visibles sur la carte FeuxDeForet. Active par defaut, mais desactivable.
 - `Supprimer les entites absentes apres`: delai de retention, en heures, avant la suppression automatique des feux, projections, zones satellite, hotspots et aeronefs qui ne sont plus presents dans les sources. Valeur par defaut : 24 heures.
 - `NASA FIRMS MAP_KEY`: cle gratuite necessaire pour appeler les services FIRMS.
 - `Source satellite FIRMS`: source de donnees satellite, par defaut `VIIRS S-NPP NRT`.

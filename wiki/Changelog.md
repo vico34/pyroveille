@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Passage en stable de la carte PyroVeille avec zones satellite FIRMS, projections et suivi des moyens aeriens.
+- Prise en charge des feux signales en jaune avec alertes et marqueurs dedies.
+- Ajout du fallback ADS-B pour les Canadair/Pelican, Dash/Milan et helicos Dragon visibles publiquement.
+- Suppression automatique des entites dynamiques absentes apres un delai configurable.
+- Correction des collisions Leaflet avec la carte native Home Assistant.
+- Correction des erreurs `403` Cloudflare sur les flux publics FeuxDeForet.
+- Validation HACS et Hassfest.
+
 ## 0.4.0-beta.13
 
 - Correction des erreurs `403` Cloudflare sur les flux publics FeuxDeForet.

@@ -2,7 +2,7 @@
 
 ## J'obtiens une erreur 403 Cloudflare
 
-Mettez PyroVeille a jour vers `0.4.0-beta.13` ou une version plus recente. FeuxDeForet filtre certains profils HTTP sur ses routes publiques ; cette version utilise les en-tetes actuellement attendus par le site.
+Mettez PyroVeille a jour vers `0.4.0` ou une version plus recente. FeuxDeForet filtre certains profils HTTP sur ses routes publiques ; cette version utilise les en-tetes actuellement attendus par le site.
 
 Si l'erreur persiste, ouvrez les diagnostics PyroVeille et relevez le code HTTP, le serveur et le Ray ID Cloudflare avant de creer une issue. Ne publiez aucun cookie ni jeton personnel.
 

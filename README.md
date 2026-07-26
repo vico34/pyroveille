@@ -49,7 +49,7 @@ Champs principaux :
 - `Mode de geocodage`: `Adresse puis commune` utilise l'API Adresse officielle puis Nominatim en secours. `Adresse stricte` limite le geocodage a l'API Adresse officielle.
 - `Geocoder les communes sans coordonnees natives`: utilise Nominatim/OpenStreetMap pour placer les signalements sur la carte quand feuxdeforet.fr ne fournit pas de latitude/longitude.
 - `Activer les projections automatiques`: cree les points de projection sur la carte et recupere la meteo locale. Desactivez cette option pour garder uniquement les alertes et marqueurs d'incendie.
-- `Activer le suivi live avions et helicos`: cree des marqueurs GPS pour les moyens aeriens publies par la carte FeuxDeForet et complete avec un fallback ADS-B filtre sur les Canadair/Pelican, Dash/Milan et helicos Dragon. Active par defaut en beta, mais desactivable si le flux live n'est pas utile.
+- `Activer le suivi live avions et helicos`: cree des marqueurs GPS pour les moyens aeriens publies par la carte FeuxDeForet et complete avec un fallback ADS-B filtre sur les Canadair/Pelican, Dash/Milan et helicos Dragon. Active par defaut, mais desactivable si le flux live n'est pas utile.
 
 ## Entites creees
 
@@ -60,12 +60,12 @@ Champs principaux :
 - `device_tracker.*`: un marqueur GPS par incendie proche, visible sur la carte Home Assistant.
 - `device_tracker.pyroveille_fire_*_projection_*`: marqueurs de projection automatique de trajectoire quand la meteo locale est disponible, avec un libelle temporel comme `+1h`.
 - `device_tracker.pyroveille_fire_*_satellite_zone`: zone satellite estimee FIRMS, affichee comme un cercle GPS quand des hotspots sont disponibles.
-- `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS en beta, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
+- `device_tracker.pyroveille_hotspot_*`: points satellite NASA FIRMS, si les zones satellite sont activees et qu'une cle MAP_KEY est configuree.
 - `device_tracker.pyroveille_aircraft_*`: moyens aeriens live, si le suivi avions/helicos est active. FeuxDeForet est rafraichi toutes les 10 secondes et le fallback ADS-B toutes les 60 secondes. Les attributs exposent notamment `aircraft_type`, `category_label`, `callsign`, `registration`, `source`, `heading`, `speed_kmh`, `altitude_m` et `track_geojson`.
 
 Les entites carte qui ne sont plus fournies par les sources deviennent indisponibles, puis sont automatiquement supprimees du registre Home Assistant apres 24 heures par defaut. La duree peut etre reglee entre 1 et 720 heures avec l'option `Supprimer les entites absentes apres`.
 
-Depuis `0.4.0-beta.13`, les requetes FeuxDeForet utilisent un profil HTTP compatible avec la protection Cloudflare actuelle du site.
+Depuis `0.4.0`, les requetes FeuxDeForet utilisent un profil HTTP compatible avec la protection Cloudflare actuelle du site.
 
 ## Apercu
 
@@ -122,7 +122,7 @@ La direction utilisee est la direction sous le vent. Les marqueurs de projection
 
 ## Beta : zones satellite FIRMS
 
-La version `0.4.0-beta.5` permet de tester une zone satellite estimee autour des incendies proches via NASA FIRMS, avec une carte custom capable d'afficher une zone difforme transparente.
+La version `0.4.0` permet d'afficher une zone satellite estimee autour des incendies proches via NASA FIRMS, avec une carte custom capable d'afficher une zone difforme transparente.
 
 Options a configurer :
 
