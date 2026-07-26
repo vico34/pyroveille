@@ -65,6 +65,8 @@ Champs principaux :
 
 Les entites carte qui ne sont plus fournies par les sources deviennent indisponibles, puis sont automatiquement supprimees du registre Home Assistant apres 24 heures par defaut. La duree peut etre reglee entre 1 et 720 heures avec l'option `Supprimer les entites absentes apres`.
 
+Depuis `0.4.0-beta.13`, les requetes FeuxDeForet utilisent un profil HTTP compatible avec la protection Cloudflare actuelle du site.
+
 ## Apercu
 
 ![Capteurs PyroVeille](images/pyroveille-info.png)

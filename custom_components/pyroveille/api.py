@@ -22,7 +22,10 @@ from .util import distance_km
 
 _LOGGER = logging.getLogger(__name__)
 
-USER_AGENT = "HomeAssistant-PyroVeille/0.4.0-beta.11"
+USER_AGENT = (
+    "Mozilla/5.0 (Linux; Home Assistant) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/138.0 Safari/537.36"
+)
 ADRESSE_GOUV_URL = "https://api-adresse.data.gouv.fr/search/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
@@ -104,7 +107,11 @@ class FeuxDeForetClient:
 
     async def _async_get_cartography_fires(self) -> list[FireAlert]:
         """Fetch fire points from the public map GeoJSON feed."""
-        headers = {"Accept": "application/geo+json, application/json", "User-Agent": USER_AGENT}
+        headers = {
+            "Accept": "application/geo+json, application/json",
+            "Referer": f"{FEUXDEFORET_HOME_URL}/",
+            "User-Agent": USER_AGENT,
+        }
         try:
             async with self._session.get(FEUXDEFORET_CARTOGRAPHY_URL, headers=headers, timeout=20) as response:
                 if response.status >= 400:
@@ -130,11 +137,15 @@ class FeuxDeForetClient:
     async def _request_json(self, path: str) -> dict[str, Any]:
         """Request JSON from the configured public API base."""
         url = f"{self._api_base_url}{path}"
-        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+        headers = {
+            "Accept": "application/json",
+            "Referer": f"{FEUXDEFORET_HOME_URL}/",
+            "User-Agent": USER_AGENT,
+        }
         try:
             async with self._session.get(url, headers=headers, timeout=20) as response:
                 if response.status >= 400:
-                    raise FeuxDeForetApiError(f"{url} returned HTTP {response.status}")
+                    raise FeuxDeForetApiError(_http_error_message(url, response))
                 data = await response.json(content_type=None)
         except (ClientError, TimeoutError) as err:
             raise FeuxDeForetApiError(f"Could not fetch {url}") from err
@@ -374,7 +385,11 @@ class FeuxDeForetClient:
 
     async def _async_get_aircraft_payload(self) -> Any:
         """Request the aircraft tracker payload through the public feuxdeforet.fr proxy."""
-        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+        headers = {
+            "Accept": "application/json",
+            "Referer": f"{FEUXDEFORET_HOME_URL}/",
+            "User-Agent": USER_AGENT,
+        }
         nonce = await self._async_get_proxy_nonce()
         if nonce:
             headers["X-FDF-Nonce"] = nonce
@@ -717,6 +732,19 @@ def _location_from_url(url: str | None) -> tuple[str | None, str | None]:
         commune = match.group(1).replace("-", " ").title()
     department = department_match.group(1).upper() if department_match else None
     return commune, department
+
+
+def _http_error_message(url: str, response: Any) -> str:
+    """Return an actionable HTTP error without exposing response content."""
+    message = f"{url} returned HTTP {response.status}"
+    server = response.headers.get("Server")
+    ray_id = response.headers.get("CF-Ray")
+    if server:
+        message += f" (server: {server}"
+        if ray_id:
+            message += f", ray: {ray_id}"
+        message += ")"
+    return message
 
 
 def _bbox_around(latitude: float, longitude: float, radius_km: float) -> tuple[float, float, float, float]:

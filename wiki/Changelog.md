@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-beta.13
+
+- Correction des erreurs `403` Cloudflare sur les flux publics FeuxDeForet.
+- Utilisation d'un profil HTTP compatible avec la protection actuelle du site.
+- Ajout du serveur et du Ray ID Cloudflare aux diagnostics d'erreur quand ils sont disponibles.
+
 ## 0.4.0-beta.12
 
 - Suppression automatique des entites carte qui restent absentes des sources.
