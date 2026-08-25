@@ -1,4 +1,3 @@
-/home/vicar/.bashrc: line 43: bind: warning: line editing not enabled
 const LEAFLET_JS = "/pyroveille_static/leaflet.js";
 const LEAFLET_CSS = "/pyroveille_static/leaflet.css";
 
