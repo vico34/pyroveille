@@ -115,6 +115,7 @@ class PyroVeilleMapCard extends HTMLElement {
     this.mapElement = this.shadowRoot.querySelector(".map");
     this.map = undefined;
     this.layers = undefined;
+    this._hasFitBounds = false;
   }
 
   set hass(hass) {
@@ -213,9 +214,10 @@ class PyroVeilleMapCard extends HTMLElement {
       }
     }
 
-    if (bounds.length) {
+    if (bounds.length && !this._hasFitBounds) {
       this.map.fitBounds(bounds, { padding: [24, 24], maxZoom: this.config.default_zoom || 12 });
-    } else {
+      this._hasFitBounds = true;
+    } else if (!bounds.length) {
       this._showEmpty();
     }
   }
