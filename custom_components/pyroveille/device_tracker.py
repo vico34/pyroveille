@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
-from homeassistant.components.device_tracker.config_entry import TrackerEntity
+from homeassistant.components.device_tracker import TrackerEntity
 from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
